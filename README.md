@@ -8,7 +8,7 @@ This tutorial is designed for people familiar with Android development and objec
 This conceptual documentation is designed to let you quickly start exploring and developing applications with the ScapeKit SDK for Android. 
 
 - [Get the code](#get_the_code)
-- [Installation](#installation)
+- [ScapeKit Installation](#installation)
 - [Integrate Google Maps](#add_google_maps)
 
  Understand the code
@@ -28,9 +28,49 @@ Next steps will explain from how this project was created, how to enable Scapeki
 
 
 <a name="#installation"></a>
-## Installation
+## ScapeKit Installation
 
-... link this section
+### Obtain a ScapeKit API key
+
+Request Alpha Access to the SDK [here](https://scape.io). This will enable you to generate an **API Key** that you can embed later on into your own Android application.
+
+### Download
+
+ScapeKit Android is distributed in an **.aar** format. 
+To use it in your project add ScapeKit's maven repository to your top-level `build.gradle` file:
+
+```groovy
+    buildscript {
+        ext.kotlin_version = '1.3.0'
+        repositories {
+            google()
+            jcenter()
+            maven { url "https://artefacts.developer.scape.io/android/" }
+        }
+        dependencies {
+            classpath 'com.android.tools.build:gradle:3.2.1'
+            classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        }
+    }
+
+    allprojects {
+        repositories {
+            google()
+            jcenter()
+            maven { url "https://artefacts.developer.scape.io/android/" }
+        }
+    }
+```
+
+To use ScapeKit in your project add its dependency to your application build file:
+
+```groovy
+    dependencies {
+        implementation 'com.scape:scapekit:x.x.x@aar' // specify the desired version here
+    }
+```
+
+(We strongly advise against using dynamic dependencies in your applications as it can introduce unexpected behaviors and they add nondeterminism to your build.)
  
 <a name="#add_google_maps"></a>
 ## Integrate Google Maps
@@ -41,7 +81,7 @@ Version [v3.0.0 beta of the Google Maps SDK](https://developers.google.com/maps/
 
 This project was created with *Google Maps Activity* in the 'Add an activity dialog' in order to include a map activity.
 
-<img src="../images/android-create-google-maps-activity.png" width="400" height="300">
+<img src="images/android-create-google-maps-activity.png" width="400" height="300">
 
 With this step Android Studio generates: *google_maps_api.xml* resource, *activity_maps.xml* layout  and the *MainActivity.kt* files. 
 
@@ -144,9 +184,40 @@ Now that we the map set up we are ready to add Markers when we get Scape measure
 
 ### Integrate ScapeKit SDK for Android
 
-// todo add scape client start/etc, get session
+**■ Specify API key**
 
+The _ScapeClient_ instance needs an API key generated at the previous step.
+We will also enable _debugSupport_ flag, for logging purposes.
+    
+```kotlin
+    class MyApp: Application() {
 
+    lateinit var scapeClient: ScapeClient
+
+    override fun onCreate() {
+        super.onCreate()
+
+        scapeClient = Scape.scapeClientBuilder
+                            .withContext(applicationContext)
+                            .withApiKey("Put your Api Key here")
+                            .build()
+       }
+   }
+```
+
+**■ Now start the _ScapeClient_ instance**
+
+```kotlin
+    class MyApp: Application() {
+
+        scapeClient.start(clientStarted = {
+            Log.i(TAG, "ScapeClient started")
+        }, clientFailed = {
+            Log.i(TAG, it)
+        })
+       }
+    }
+```
 
 The layout for *MainActivity.kt* is a basic view split between the AR view and the map with a localization button:
 ```kotlin
@@ -261,28 +332,78 @@ override fun onResume() {
 
 Note that since Android Oreo, implicit broadcast receivers won’t work when registered in the AndroidManifest.xml
 
-Explain here UI elements
-
 
 <a name="#handle_permissions"></a>
 ## Handle permissions
 
-<a name="#handle_permissions"></a>
+ ScapeKit contains *PermissionHelper* utility that determines if the required permissions are Granted [PermissionHelper.checkPermissions] and allows developer to request for the missing permissions at runtime [PermissionHelper.requestPermissions]
+
+Check if permissions required by ScapeKit have been granted and prompt the user to grant the ones that haven't been granted yet.
+
+ ```kotlin
+    private fun checkAndRequestPermissions() {
+        val deniedPermissions = PermissionHelper.checkPermissions(this)
+
+        if (deniedPermissions.isEmpty()) {
+            initScapeClient()
+        }
+        else {
+            PermissionHelper.requestPermissions(this, deniedPermissions)
+        }
+    }
+ ```
+
+Only attempt to init ScapeClient once all the required permissions are Granted
+```kotlin
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (PermissionHelper.checkPermissions(this).isEmpty()) {
+            initScapeClient()
+        }
+
+        PermissionHelper.processResult(this, requestCode, permissions, grantResults)
+    }
+```
+
+<a name="#app_lifecycle"></a>
 ## Application lifecycle
 
 One last thing to take care of/into consideration is to pause any heavy/outgoing requests while the application goes to background.
 
+When activity is in background we pause the current ARSession:
+```kotlin
+    override fun onPause() {
+        super.onPause()
 
+        scapeClient.stop({}, {})
+
+        (sceneform_fragment as? ArFragment)?.arSceneView?.session?.pause()
+    }
+```
+
+Terminate the _ScapeClient:
+When the app is in background, _ScapeClient_ should be stopped. If the client is currently listening for incoming events, it needs to stop listening as well. After `terminate` is called, any object retrieved directly from ScapeClient ( `ScapeSession`) is considered invalid. 
+
+```kotlin
+    override fun onDestroy() {
+        unregisterConnectivityReceiver()
+
+        scapeClient.terminate({}, {})
+
+        super.onDestroy()
+    }
+``` 
 
 <a name="#run_it"></a>
 ## Run it!
 
 Build and run your app.
-In Android Stufio, click the *Run* menu option to run your app.
+In Android Studio, click the *Run* menu option to run your app.
 
- some screenshots here
-& troubleshoot with debug overlay
-
+<img align="left" src="screenshots/geopositioning_in_progress.png" title="Geopositioning in progress" hspace="20" width="200" height="350">
+<img align="left" src="screenshots/geoposition_locked_1.png" title="Position locked" hspace="20" width="200" height="350">
+<img align="left" src="screenshots/geoposition_locked_2.png" title="Position locked" hspace="20" width="200" height="350">
 
 
 

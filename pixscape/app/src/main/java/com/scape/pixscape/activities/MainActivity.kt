@@ -152,10 +152,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
      */
     private fun checkAndRequestPermissions() {
         val deniedPermissions = PermissionHelper.checkPermissions(this)
-        Log.d(TAG, "checkAndRequestPermissions ${deniedPermissions.toString()}")
 
         if (deniedPermissions.isEmpty()) {
-            Log.d(TAG, "checkAndRequestPermissions - all granted")
             initScapeClient()
         }
         else {
@@ -166,10 +164,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
 
-        Log.d(TAG, "onRequestPermissionsResult $permissions $grantResults")
-
         if (PermissionHelper.checkPermissions(this).isEmpty()) {
-            Log.d(TAG, "onRequestPermissionsResult - all granted")
             initScapeClient()
         }
 
