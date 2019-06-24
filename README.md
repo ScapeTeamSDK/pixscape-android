@@ -7,10 +7,6 @@ This tutorial is designed for people familiar with Android development and objec
 
 This conceptual documentation is designed to let you quickly start exploring and developing applications with the ScapeKit SDK for Android. 
 
-<p align="center">
-<a href="#get_the_code">Get the code</a> | <a href="#installation">ScapeKit Installation</a> | <a href="#add_google_maps">Integrate Google Maps</a> | Understand the code <a href="#localization_time">Display Scape location on Map</a> | <a href="#handle_connectivity">Handle connectivity</a> | <a href="#handle_permissions">Handle permissions</a> | <a href="#app_lifecycle">Application lifecycle</a> | <a href="#run_it">Run it!</a>
-</p>
-
 ## Get the code/ Getting started
 
 Clone or download the ScapeKit [Pixscape Sample repository](https://github.com/scapetechnologies/pixscape-android) from Github.
@@ -165,9 +161,10 @@ Notice that the *google_maps_api.xml* file contains instructions on how to get y
  
  Complete steps are explained in detail [here](https://developers.google.com/maps/documentation/android-sdk/start#step_4_get_a_google_maps_api_key)
 
+*Understand the code*
 ## Display Scape location on Map
 
-Localizatino time!
+Localization time!
 Now that we the map set up we are ready to add Markers when we get Scape measurements.
 
 ### Integrate ScapeKit SDK for Android
