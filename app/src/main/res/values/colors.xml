@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <color name="colorScapeDark0">#31BF92</color>
+    <color name="colorGray">#979F9D</color>
+    <color name="colorDarkGray">#666666</color>
+    <!--25% transparency-->
+    <color name="transparent">#40FFFFFF</color>
+    <!--90% transparency-->
+    <color name="semi_transparent">#E6FFFFFF</color>
+    <color name="full_transparent">#CC000000</color>
+    <color tools:ignore="UnusedResources" name="text_light_grey">#DDDDDD</color>
+</resources>

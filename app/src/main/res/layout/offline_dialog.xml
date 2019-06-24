@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/gmm_white">
+
+    <ImageView
+        android:id="@+id/offline_logo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:src="@drawable/offline"
+        android:scaleType="fitXY"
+        android:padding="@dimen/margin_small"
+        />
+
+    <TextView
+        android:id="@+id/progress_hint_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/offline_hint_title"
+        android:layout_below="@+id/offline_logo"
+        android:layout_centerHorizontal="true"
+        android:padding="@dimen/margin_small"
+        android:textColor="@color/colorGray"
+        />
+
+    <TextView
+        android:id="@+id/progress_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/offline_hint_message"
+        android:layout_below="@+id/progress_hint_title"
+        android:layout_centerHorizontal="true"
+        android:gravity="center"
+        android:padding="@dimen/margin_small"
+        android:textColor="@android:color/darker_gray"
+        />
+
+</RelativeLayout>
