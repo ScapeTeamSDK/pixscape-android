@@ -11,7 +11,6 @@ This conceptual documentation is designed to let you quickly start exploring and
 <a href="#get_the_code">Get the code</a> | <a href="#installation">ScapeKit Installation</a> | <a href="#add_google_maps">Integrate Google Maps</a> | Understand the code <a href="#localization_time">Display Scape location on Map</a> | <a href="#handle_connectivity">Handle connectivity</a> | <a href="#handle_permissions">Handle permissions</a> | <a href="#app_lifecycle">Application lifecycle</a> | <a href="#run_it">Run it!</a>
 </p>
 
-<a name="#get_the_code"></a>
 ## Get the code/ Getting started
 
 Clone or download the ScapeKit [Pixscape Sample repository](https://github.com/scapetechnologies/pixscape-android) from Github.
@@ -19,8 +18,6 @@ In Android Studio, use the "Import Project" option.
 
 Next steps will explain from how this project was created, how to enable Scapekit and Google Maps in order to display Markers after each localization.
 
-
-<a name="#installation"></a>
 ## ScapeKit Installation
 
 ### Obtain a ScapeKit API key
@@ -64,8 +61,7 @@ To use ScapeKit in your project add its dependency to your application build fil
 ```
 
 (We strongly advise against using dynamic dependencies in your applications as it can introduce unexpected behaviors and they add nondeterminism to your build.)
- 
-<a name="#add_google_maps"></a>
+
 ## Integrate Google Maps
 
 Version [v3.0.0 beta of the Google Maps SDK](https://developers.google.com/maps/documentation/android-sdk/v3-client-migration) is used in this sample, that is a new implementation with same API surface as the previous version, but that is distributed as a standalone static library, that is not as part of Google Play services anymore.
@@ -169,10 +165,9 @@ Notice that the *google_maps_api.xml* file contains instructions on how to get y
  
  Complete steps are explained in detail [here](https://developers.google.com/maps/documentation/android-sdk/start#step_4_get_a_google_maps_api_key)
 
+## Display Scape location on Map
 
-<a name="#localization_time"></a>
-## Localization time! / Display Scape location on Map
-
+Localizatino time!
 Now that we the map set up we are ready to add Markers when we get Scape measurements.
 
 ### Integrate ScapeKit SDK for Android
@@ -282,8 +277,6 @@ override fun onScapeMeasurementsUpdated(scapeSession: ScapeSession?, measurement
 **Note**  
 The following sections were designed/written to ensure a smooth UX experience, so that when the application is exposed to configuration and network changes, the end user will go through a seamless experience.
 
-
-<a name="#handle_connectivity"></a>
 ## Handle connectivity
 
 For better user experience our app needs to notify the end user if the handset id not connected to the t, or the connection is too slow to complete the requests.
@@ -325,8 +318,6 @@ override fun onResume() {
 
 Note that since Android Oreo, implicit broadcast receivers won’t work when registered in the AndroidManifest.xml
 
-
-<a name="#handle_permissions"></a>
 ## Handle permissions
 
  ScapeKit contains *PermissionHelper* utility that determines if the required permissions are Granted [PermissionHelper.checkPermissions] and allows developer to request for the missing permissions at runtime [PermissionHelper.requestPermissions]
@@ -359,7 +350,6 @@ Only attempt to init ScapeClient once all the required permissions are Granted
     }
 ```
 
-<a name="#app_lifecycle"></a>
 ## Application lifecycle
 
 One last thing to take care of/into consideration is to pause any heavy/outgoing requests while the application goes to background.
@@ -388,7 +378,6 @@ When the app is in background, _ScapeClient_ should be stopped. If the client is
     }
 ``` 
 
-<a name="#run_it"></a>
 ## Run it!
 
 Build and run your app.
