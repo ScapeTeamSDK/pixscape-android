@@ -7,16 +7,9 @@ This tutorial is designed for people familiar with Android development and objec
 
 This conceptual documentation is designed to let you quickly start exploring and developing applications with the ScapeKit SDK for Android. 
 
-- [Get the code](#get_the_code)
-- [ScapeKit Installation](#installation)
-- [Integrate Google Maps](#add_google_maps)
-
- Understand the code
-- [Display Scape location on Map](#localization_time)
-- [Handle connectivity](#handle_connectivity)
-- [Handle permissions](#handle_permissions)
-- [Application lifecycle](#app_lifecycle)
-- [Run it!](#run_it)
+<p align="center">
+<a href="#get_the_code">Get the code</a> | <a href="#installation">ScapeKit Installation</a> | <a href="#add_google_maps">Integrate Google Maps</a> | Understand the code <a href="#localization_time">Display Scape location on Map</a> | <a href="#handle_connectivity">Handle connectivity</a> | <a href="#handle_permissions">Handle permissions</a> | <a href="#app_lifecycle">Application lifecycle</a> | <a href="#run_it">Run it!</a>
+</p>
 
 <a name="#get_the_code"></a>
 ## Get the code/ Getting started
