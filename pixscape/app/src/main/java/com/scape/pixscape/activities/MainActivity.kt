@@ -24,13 +24,6 @@ import com.google.android.libraries.maps.model.BitmapDescriptorFactory
 import com.google.android.libraries.maps.model.CameraPosition
 import com.google.android.libraries.maps.model.LatLng
 import com.google.android.libraries.maps.model.Marker
-import com.google.ar.core.Config
-import com.google.ar.core.Frame
-import com.google.ar.core.Session
-import com.google.ar.core.exceptions.CameraNotAvailableException
-import com.google.ar.sceneform.FrameTime
-import com.google.ar.sceneform.Scene
-import com.google.ar.sceneform.ux.ArFragment
 import com.scape.pixscape.PixscapeApp
 import com.scape.pixscape.R
 import com.scape.pixscape.helpers.GoogleMapAnimationHelper
@@ -47,9 +40,9 @@ typealias ScapeLatLng = com.scape.scapekit.LatLng
  * This is a simple example that shows how to integrate ScapeKit SDK in an application
  * that uses Google Maps to display current location, requested on demand by the user.
  *
- * The View is split into: an ArFragment and Maps view.
+ * The View is split into: a Camera preview and Maps view.
  */
-class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallback, ScapeSessionObserver, Scene.OnUpdateListener {
+class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallback, ScapeSessionObserver {
 
     companion object {
         private const val TAG = "MainActivity"
@@ -104,27 +97,8 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
                 displayToast(it)
             })
 
-            val arFragment = sceneform_fragment as ArFragment
-            arFragment.planeDiscoveryController.hide()
-            arFragment.planeDiscoveryController.setInstructionView(null)
-            arFragment.arSceneView.planeRenderer.isEnabled = false
-            arFragment.arSceneView?.scene?.addOnUpdateListener(this)
 
-            var arSession = arFragment.arSceneView?.session
-            if (arSession == null) {
-                arSession = Session(this@MainActivity)
-            }
-
-            val config = arSession.config
-            if (config?.focusMode == Config.FocusMode.FIXED) {
-                config.focusMode = Config.FocusMode.AUTO
-            }
-            config?.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-
-            arSession.configure(config)
-
-            arFragment.arSceneView?.setupSession(arSession)
-            arSession.resume()
+            // resume Camers
         }
 
         registerConnectivityReceiver()
@@ -135,7 +109,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
 
         scapeClient.stop({}, {})
 
-        (sceneform_fragment as? ArFragment)?.arSceneView?.session?.pause()
+        // pause camera
     }
 
     override fun onDestroy() {
@@ -231,35 +205,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
     private fun setupCamera() {
         scapeSession = scapeClient.scapeSession
 
-        val arFragment = (sceneform_fragment as ArFragment)
-        arFragment.planeDiscoveryController?.hide()
-        arFragment.planeDiscoveryController?.setInstructionView(null)
-        arFragment.arSceneView.planeRenderer.isEnabled = false
-        arFragment.arSceneView?.scene?.addOnUpdateListener(this)
-
-        var arSession = arFragment.arSceneView?.session
-
-        // bind the Session to the Activity.
-        if (arSession == null) {
-            arSession = Session(this@MainActivity)
-        }
-
-        val config = arSession.config
-        if (config?.focusMode == Config.FocusMode.FIXED) {
-            config.focusMode = Config.FocusMode.AUTO
-        }
-        config?.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-
-        arSession.configure(config)
-
-        arFragment.arSceneView?.setupSession(arSession)
-
-        try {
-            arSession.resume()
-        }
-        catch (e: CameraNotAvailableException) {
-            Log.d(TAG, "CameraNotAvailableException")
-        }
+        // use Camera preview
     }
 
     private fun delayActivityIndicatorDismiss() {
@@ -542,20 +488,20 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
     }
 
     // region Scene.OnUpdateListener
-    override fun onUpdate(p0: FrameTime?) {
-        var arFrame: Frame?
-
-        try {
-            arFrame = (sceneform_fragment as? ArFragment)?.arSceneView?.session?.update()
-            if(arFrame != null) {
-                scapeClient.scapeSession?.setARFrame(arFrame)
-            }
-        } catch (e: CameraNotAvailableException) {
-            Log.e("onUpdate", e.toString())
-        } catch (t: Throwable) {
-            Log.e("onUpdate", "Exception in Scene.OnUpdateListener $t")
-        }
-    }
+//    override fun onUpdate(p0: FrameTime?) {
+//        var arFrame: Frame?
+//
+//        try {
+//            arFrame = (sceneform_fragment as? ArFragment)?.arSceneView?.session?.update()
+//            if(arFrame != null) {
+//                scapeClient.scapeSession?.setARFrame(arFrame)
+//            }
+//        } catch (e: CameraNotAvailableException) {
+//            Log.e("onUpdate", e.toString())
+//        } catch (t: Throwable) {
+//            Log.e("onUpdate", "Exception in Scene.OnUpdateListener $t")
+//        }
+//    }
     // endregion Scene.OnUpdateListener
 
 }

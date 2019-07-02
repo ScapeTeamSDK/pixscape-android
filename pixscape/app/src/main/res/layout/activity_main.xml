@@ -9,13 +9,8 @@
         android:id="@+id/top_layout"
         android:layout_width="match_parent"
         android:layout_height="450dp"
-        android:layout_marginBottom="-20dp">
-        <fragment
-            android:id="@+id/sceneform_fragment"
-            android:name="com.scape.pixscape.fragments.PixscapeArFragment"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_horizontal|top" />
+        android:layout_marginBottom="-20dp"
+        android:background="@android:color/darker_gray">
 
         <ProgressBar
             android:id="@+id/progress_bar"

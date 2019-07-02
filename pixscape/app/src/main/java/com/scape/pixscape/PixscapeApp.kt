@@ -8,7 +8,7 @@ import com.scape.scapekit.ScapeClient
 /**
  * Basic Application class that demonstrates the initialisation of the ScapeClient.
  *
- * ScapeClient entry point is acquired with debugSupport and ArSupport enabled and with our own Api Key.
+ * ScapeClient entry point is acquired with debugSupport with our own Api Key.
  */
 class PixscapeApp : Application() {
 
@@ -34,7 +34,7 @@ class PixscapeApp : Application() {
 
         scapeClient = Scape.scapeClientBuilder
                 .withContext(applicationContext)
-                .withDebugSupport(false)
+                .withDebugSupport(true)
                 .withApiKey(BuildConfig.SCAPEKIT_API_KEY)
                 .build()
     }

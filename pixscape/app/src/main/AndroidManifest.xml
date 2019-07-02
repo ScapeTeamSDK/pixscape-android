@@ -4,8 +4,8 @@
 
     <!--For play store-->
     <uses-feature android:name="android.hardware.camera" android:required="true"/>
-    <uses-feature android:name="android.hardware.camera.ar" android:required="true" />
 
+    <!-- Lock portrait mode-->
     <uses-feature android:name="android.hardware.screen.portrait" />
 
     <!--permissions-->
@@ -21,7 +21,7 @@
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
-    <!--&lt;!&ndash;Allow Toast on Nougat ++ &ndash;&gt;-->
+    <!--&lt;!&ndash;Allow Toast on Nougat ++ &ndash;&gt; TODO remove this in release mode-->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
 
     <application
@@ -33,8 +33,6 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         >
-
-        <meta-data android:name="com.google.ar.core" android:value="required" />
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
@@ -51,9 +49,6 @@
             </intent-filter>
         </activity>
 
-        <activity android:name="com.google.ar.core.InstallActivity">
-
-        </activity>
         <activity android:name=".activities.OfflineActivity"
                   android:screenOrientation="portrait"
                   android:theme="@style/AppTheme.NoActionBar"/>
