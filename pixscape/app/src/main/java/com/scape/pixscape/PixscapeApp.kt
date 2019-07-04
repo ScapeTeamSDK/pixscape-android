@@ -37,11 +37,9 @@ class PixscapeApp : Application() {
 
         scapeClient = Scape.scapeClientBuilder
                 .withContext(applicationContext)
-                .withDebugSupport(true)
+                .withDebugSupport(false)
                 .withApiKey(BuildConfig.SCAPEKIT_API_KEY)
                 .build()
 
-        scapeClient.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.CONSOLE))
-        scapeClient.debugSession?.mockGPSCoordinates(51.553049, -0.124107)
     }
 }
