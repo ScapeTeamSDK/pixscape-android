@@ -6,13 +6,12 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
-import android.support.design.widget.BottomSheetDialog
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.github.ybq.android.spinkit.style.Circle
 import com.github.ybq.android.spinkit.style.DoubleBounce
 import com.google.android.libraries.maps.CameraUpdateFactory
@@ -24,6 +23,7 @@ import com.google.android.libraries.maps.model.BitmapDescriptorFactory
 import com.google.android.libraries.maps.model.CameraPosition
 import com.google.android.libraries.maps.model.LatLng
 import com.google.android.libraries.maps.model.Marker
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
@@ -295,7 +295,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
 
     override fun onDeviceMotionMeasurementsUpdated(p0: ScapeSession?, measurements: MotionMeasurements?) {
         Log.d(TAG, "onDeviceMotionMeasurementsUpdated $measurements")
-
     }
 
     override fun onScapeMeasurementsUpdated(p0: ScapeSession?, measurements: ScapeMeasurements?) {
@@ -311,12 +310,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
 
                        delayActivityIndicatorDismiss()
                        addMarkerAndMoveMapToGeoPosition(measurements.latLng, true)
-                    }
-                    ScapeMeasurementsStatus.UNAVAILABLE_AREA -> {
-                        progress_text.text = getString(R.string.Localisation_unavailable_area)
-                        doubleBounce.color = Color.RED
-
-                        delayActivityIndicatorDismiss()
                     }
                     ScapeMeasurementsStatus.NO_RESULTS -> {
                         progress_text.text = getString(R.string.localisation_error)
@@ -349,19 +342,19 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
         }
     }
 
-    override fun onCameraTransformUpdated(p0: ScapeSession?, p1: ArrayList<Double>?) {
-
-    }
-
     override fun onScapeSessionError(scapeSession: ScapeSession?, scapeSessionState: ScapeSessionState, errMessage: String) {
         Log.d(TAG, "onScapeSessionError $scapeSessionState $errMessage")
 
         runOnUiThread {
             toggleLocalizeInProgress(false)
 
-            progress_text.text = if (scapeSessionState == ScapeSessionState.LOCATION_SENSORS_ERROR)
-                                        getString(R.string.localisation_sensors_error)
-                                    else getString(R.string.localisation_error)
+            if (scapeSessionState == ScapeSessionState.LOCATION_SENSORS_ERROR)
+                progress_text.text =getString(R.string.localisation_sensors_error)
+            else if (errMessage == "Current area does not exist within Scape Vision Engine")
+                progress_text.text = getString(R.string.Localisation_unavailable_area)
+            else
+               progress_text.text = getString(R.string.localisation_error)
+
             doubleBounce.color = Color.RED
 
             delayActivityIndicatorDismiss()
