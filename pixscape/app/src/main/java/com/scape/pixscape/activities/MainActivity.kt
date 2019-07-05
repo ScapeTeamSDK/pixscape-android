@@ -6,13 +6,12 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.os.Bundle
 import android.os.Handler
-import android.support.design.widget.BottomSheetDialog
-import android.support.v4.content.ContextCompat
-import android.support.v7.app.AppCompatActivity
 import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.github.ybq.android.spinkit.style.Circle
 import com.github.ybq.android.spinkit.style.DoubleBounce
 import com.google.android.libraries.maps.CameraUpdateFactory
@@ -24,6 +23,7 @@ import com.google.android.libraries.maps.model.BitmapDescriptorFactory
 import com.google.android.libraries.maps.model.CameraPosition
 import com.google.android.libraries.maps.model.LatLng
 import com.google.android.libraries.maps.model.Marker
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.ar.core.Config
 import com.google.ar.core.Frame
 import com.google.ar.core.Session
@@ -124,10 +124,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
             arSession.configure(config)
 
             arFragment.arSceneView?.setupSession(arSession)
-            arSession.resume()
-        }
 
-        registerConnectivityReceiver()
+            try {
+                arSession.resume()
+            }
+            catch (e: CameraNotAvailableException) {
+                Log.d(TAG, "CameraNotAvailableException")
+            }
+         }
+
+         registerConnectivityReceiver()
     }
 
     override fun onPause() {
@@ -276,10 +282,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
         this.isLoading = isLoading
 
         if (!isLoading) {
-            Log.d(TAG, "Localize finished")
+            Log.d(TAG, "Localization finished")
         }
         else {
-            Log.d(TAG, "Localize in progress")
+            Log.d(TAG, "Localization in progress")
             progress_text.text = getString(R.string.localisation_in_progress)
             doubleBounce.color = ContextCompat.getColor(this, R.color.colorScapeDark0)
 
@@ -295,7 +301,6 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
 
     override fun onDeviceMotionMeasurementsUpdated(p0: ScapeSession?, measurements: MotionMeasurements?) {
         Log.d(TAG, "onDeviceMotionMeasurementsUpdated $measurements")
-
     }
 
     override fun onScapeMeasurementsUpdated(p0: ScapeSession?, measurements: ScapeMeasurements?) {
@@ -307,31 +312,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
             if (measurements != null) {
                 when (measurements.measurementsStatus) {
                     ScapeMeasurementsStatus.RESULTS_FOUND -> {
-                       progress_text.text = getString(R.string.localisation_ready)
+                        progress_text.text = getString(R.string.localisation_ready)
 
-                       delayActivityIndicatorDismiss()
-                       addMarkerAndMoveMapToGeoPosition(measurements.latLng, true)
-                    }
-                    ScapeMeasurementsStatus.UNAVAILABLE_AREA -> {
-                        progress_text.text = getString(R.string.Localisation_unavailable_area)
-                        doubleBounce.color = Color.RED
-
-                        delayActivityIndicatorDismiss()
+                        addMarkerAndMoveMapToGeoPosition(measurements.latLng, true)
                     }
                     ScapeMeasurementsStatus.NO_RESULTS -> {
                         progress_text.text = getString(R.string.localisation_error)
                         doubleBounce.color = Color.RED
-
-                        delayActivityIndicatorDismiss()
+                    }
+                    ScapeMeasurementsStatus.UNAVAILABLE_AREA -> {
+                        progress_text.text = getString(R.string.localisation_unavailable_area)
+                        doubleBounce.color = Color.RED
                     }
                     ScapeMeasurementsStatus.INTERNAL_ERROR -> {
                         progress_text.text = getString(R.string.localisation_generic_error)
                         doubleBounce.color = Color.RED
-
-                        delayActivityIndicatorDismiss()
                     }
                 }
             }
+            delayActivityIndicatorDismiss()
         }
     }
 
@@ -349,21 +348,34 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
         }
     }
 
-    override fun onCameraTransformUpdated(p0: ScapeSession?, p1: ArrayList<Double>?) {
-
-    }
-
     override fun onScapeSessionError(scapeSession: ScapeSession?, scapeSessionState: ScapeSessionState, errMessage: String) {
         Log.d(TAG, "onScapeSessionError $scapeSessionState $errMessage")
 
         runOnUiThread {
             toggleLocalizeInProgress(false)
 
-            progress_text.text = if (scapeSessionState == ScapeSessionState.LOCATION_SENSORS_ERROR)
-                                        getString(R.string.localisation_sensors_error)
-                                    else getString(R.string.localisation_error)
+            when(scapeSessionState) {
+                ScapeSessionState.LOCATION_SENSORS_ERROR,
+                ScapeSessionState.MOTION_SENSORS_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_sensors_error)
+                }
+                ScapeSessionState.IMAGE_SENSORS_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_frame_not_ready)
+                }
+                ScapeSessionState.NETWORK_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_network_error)
+                }
+                ScapeSessionState.UNEXPECTED_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_generic_error)
+                }
+                ScapeSessionState.AUTHENTICATION_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_authentication_error)
+                }
+                else ->{
+                    return@runOnUiThread
+                }
+            }
             doubleBounce.color = Color.RED
-
             delayActivityIndicatorDismiss()
         }
     }
@@ -377,7 +389,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
      */
     private fun initMap() {
         val mapFragment = supportFragmentManager
-                    .findFragmentById(R.id.map) as SupportMapFragment
+                .findFragmentById(R.id.map) as SupportMapFragment
 
         mapFragment.getMapAsync(this)
 
@@ -542,8 +554,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
     }
 
     // region Scene.OnUpdateListener
-    override fun onUpdate(p0: FrameTime?) {
-        var arFrame: Frame?
+    override fun onUpdate(timestamp: FrameTime?) {
+
+        val arFrame: Frame?
 
         try {
             arFrame = (sceneform_fragment as? ArFragment)?.arSceneView?.session?.update()

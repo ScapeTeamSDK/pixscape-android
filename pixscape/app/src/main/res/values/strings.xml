@@ -7,7 +7,10 @@
     <string name="localisation_sensors_error">Sensors\n not ready yet,\n try again</string>
     <string name="localisation_generic_error">Something went wrong,\n please try again</string>
     <string name="localisation_ready">Geoposition\n    locked!</string>
-    <string name="Localisation_unavailable_area">This area\n is not yet\n available.</string>
+    <string name="localisation_unavailable_area">This area\n is not yet\n available.</string>
+    <string name="localisation_frame_not_ready">Camera is not ready yet\n please try again.</string>
+    <string name="localisation_network_error">Network error\n please check\n your connection.</string>
+    <string name="localisation_authentication_error">Network error\n please check\n your credentials.</string>
     <string name="localize_tooltip">Localize!</string>
     <string name="settings_tooltip">Settings</string>
     <string name="privacy">Privacy</string>

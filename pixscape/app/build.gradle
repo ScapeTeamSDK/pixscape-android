@@ -8,8 +8,8 @@ android {
         applicationId "com.scape.pixscape"
         minSdkVersion 24
         targetSdkVersion 28
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.0.1"
     }
     buildTypes {
         release {
@@ -45,33 +45,25 @@ android {
 }
 
 dependencies {
-    configurations.all {
-        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
-            if (details.requested.group == 'com.android.support' && details.requested.name == 'support-v4') {
-                details.useVersion "28.0.0"
-            }
-        }
-    }
 
     // KOTLIN
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     // UI
-    implementation 'com.android.support:appcompat-v7:28.0.0'
-    implementation 'com.android.support:design:28.0.0'
+    implementation 'androidx.appcompat:appcompat:1.0.2'
+    implementation 'com.google.android.material:material:1.1.0-alpha07'
     // LOCATION
-    implementation 'com.google.android.gms:play-services-location:16.0.0'
+    implementation 'com.google.android.gms:play-services-location:17.0.0'
     // Maps SDK
     implementation name: 'maps-sdk-3.0.0-beta', ext: 'aar'
     implementation 'com.google.android.gms:play-services-basement:15.0.1'
     implementation 'com.google.android.gms:play-services-base:15.0.1'
     implementation 'com.google.android.gms:play-services-gcm:15.0.1'
-    // SCAPEKIT
-    implementation 'com.scape:scapekit:0.9.0@aar'
     // SceneForm
-    implementation 'com.google.ar.sceneform.ux:sceneform-ux:1.6.0'
+    implementation 'com.google.ar.sceneform.ux:sceneform-ux:1.10.0'
     // CardView
-    implementation 'com.android.support:cardview-v7:28.0.0'
+    implementation 'androidx.cardview:cardview:1.0.0'
     // progress bar
     implementation 'com.github.ybq:Android-SpinKit:1.2.0'
+    implementation project(path: ':scapekit-1.0.2')
 }
 
