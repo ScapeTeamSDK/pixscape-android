@@ -124,10 +124,16 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
             arSession.configure(config)
 
             arFragment.arSceneView?.setupSession(arSession)
-            arSession.resume()
-        }
 
-        registerConnectivityReceiver()
+            try {
+                arSession.resume()
+            }
+            catch (e: CameraNotAvailableException) {
+                Log.d(TAG, "CameraNotAvailableException")
+            }
+         }
+
+         registerConnectivityReceiver()
     }
 
     override fun onPause() {
@@ -276,10 +282,10 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
         this.isLoading = isLoading
 
         if (!isLoading) {
-            Log.d(TAG, "Localize finished")
+            Log.d(TAG, "Localization finished")
         }
         else {
-            Log.d(TAG, "Localize in progress")
+            Log.d(TAG, "Localization in progress")
             progress_text.text = getString(R.string.localisation_in_progress)
             doubleBounce.color = ContextCompat.getColor(this, R.color.colorScapeDark0)
 
@@ -306,25 +312,25 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
             if (measurements != null) {
                 when (measurements.measurementsStatus) {
                     ScapeMeasurementsStatus.RESULTS_FOUND -> {
-                       progress_text.text = getString(R.string.localisation_ready)
+                        progress_text.text = getString(R.string.localisation_ready)
 
-                       delayActivityIndicatorDismiss()
-                       addMarkerAndMoveMapToGeoPosition(measurements.latLng, true)
+                        addMarkerAndMoveMapToGeoPosition(measurements.latLng, true)
                     }
                     ScapeMeasurementsStatus.NO_RESULTS -> {
                         progress_text.text = getString(R.string.localisation_error)
                         doubleBounce.color = Color.RED
-
-                        delayActivityIndicatorDismiss()
+                    }
+                    ScapeMeasurementsStatus.UNAVAILABLE_AREA -> {
+                        progress_text.text = getString(R.string.localisation_unavailable_area)
+                        doubleBounce.color = Color.RED
                     }
                     ScapeMeasurementsStatus.INTERNAL_ERROR -> {
                         progress_text.text = getString(R.string.localisation_generic_error)
                         doubleBounce.color = Color.RED
-
-                        delayActivityIndicatorDismiss()
                     }
                 }
             }
+            delayActivityIndicatorDismiss()
         }
     }
 
@@ -348,15 +354,28 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
         runOnUiThread {
             toggleLocalizeInProgress(false)
 
-            if (scapeSessionState == ScapeSessionState.LOCATION_SENSORS_ERROR)
-                progress_text.text =getString(R.string.localisation_sensors_error)
-            else if (errMessage == "Current area does not exist within Scape Vision Engine")
-                progress_text.text = getString(R.string.Localisation_unavailable_area)
-            else
-               progress_text.text = getString(R.string.localisation_error)
-
+            when(scapeSessionState) {
+                ScapeSessionState.LOCATION_SENSORS_ERROR,
+                ScapeSessionState.MOTION_SENSORS_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_sensors_error)
+                }
+                ScapeSessionState.IMAGE_SENSORS_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_frame_not_ready)
+                }
+                ScapeSessionState.NETWORK_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_network_error)
+                }
+                ScapeSessionState.UNEXPECTED_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_generic_error)
+                }
+                ScapeSessionState.AUTHENTICATION_ERROR -> {
+                    progress_text.text = getString(R.string.localisation_authentication_error)
+                }
+                else ->{
+                    return@runOnUiThread
+                }
+            }
             doubleBounce.color = Color.RED
-
             delayActivityIndicatorDismiss()
         }
     }
@@ -370,7 +389,7 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
      */
     private fun initMap() {
         val mapFragment = supportFragmentManager
-                    .findFragmentById(R.id.map) as SupportMapFragment
+                .findFragmentById(R.id.map) as SupportMapFragment
 
         mapFragment.getMapAsync(this)
 
@@ -535,8 +554,9 @@ class MainActivity : AppCompatActivity(), OnMapReadyCallback, OnMapLoadedCallbac
     }
 
     // region Scene.OnUpdateListener
-    override fun onUpdate(p0: FrameTime?) {
-        var arFrame: Frame?
+    override fun onUpdate(timestamp: FrameTime?) {
+
+        val arFrame: Frame?
 
         try {
             arFrame = (sceneform_fragment as? ArFragment)?.arSceneView?.session?.update()
