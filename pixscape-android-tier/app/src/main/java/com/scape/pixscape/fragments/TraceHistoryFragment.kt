@@ -37,9 +37,9 @@ internal class TraceHistoryFragment : Fragment() {
         viewModel.tracesList.observe(this, Observer { pairOfTraces ->
             pairOfTraces.first.observe(this, Observer { gpsValues ->
                 if(gpsValues.isNotEmpty()) {
-                    gpsTraces = gpsValues
                     emptyLayout.visibility = View.GONE
                 }
+                gpsTraces = gpsValues
                 adapter.setData(gpsTraces, scapeTraces)
             })
 
@@ -50,6 +50,12 @@ internal class TraceHistoryFragment : Fragment() {
                 // we assume there will always be more GPS traces than Scape traces so we don't check
                 // Scape traces
             })
+
+            if(gpsTraces.isEmpty()) {
+                emptyLayout.visibility = View.VISIBLE
+            } else {
+                emptyLayout.visibility = View.GONE
+            }
         })
         trace_history_list.adapter = adapter
         trace_history_list.layoutManager = LinearLayoutManager(activity!!.applicationContext)
