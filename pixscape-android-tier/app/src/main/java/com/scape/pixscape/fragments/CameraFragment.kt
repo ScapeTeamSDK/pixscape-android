@@ -2,6 +2,7 @@ package com.scape.pixscape.fragments
 
 import android.annotation.SuppressLint
 import android.content.*
+import android.icu.util.ValueIterator
 import android.location.Location
 import android.os.Bundle
 import android.os.Parcelable
@@ -340,6 +341,9 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
 
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
         miniMap?.setMapStyle(mapStyleOptions)
+
+        val waterMark: View? = miniMapView?.findViewWithTag("GoogleWatermark")
+        waterMark?.visibility = View.GONE
 
         LocationServices.getFusedLocationProviderClient(activity!!)
                 .lastLocation

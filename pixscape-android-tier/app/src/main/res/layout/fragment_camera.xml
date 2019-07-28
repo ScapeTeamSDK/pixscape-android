@@ -23,6 +23,7 @@
             android:layout_height="match_parent"
             app:liteMode="true"
             app:mapType="normal"/>
+
     </androidx.cardview.widget.CardView>
 
     <SurfaceView
