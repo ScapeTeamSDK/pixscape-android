@@ -2,8 +2,6 @@
     <string name="app_name">Pixscape</string>
 
     <string name="title_home">Home</string>
-    <string name="title_dashboard">Dashboard</string>
-    <string name="title_notifications">Notifications</string>
     <string name="notification_title">Tracking</string>
     <string name="distance">Distance</string>
     <string name="zero_dot">0.00</string>
@@ -28,6 +26,7 @@
     <string name="icon_authors_names">Scape</string>
     <string name="profile_cancel">Cancel</string>
     <string name="waiting">Just a moment…</string>
+    <string name="delete_trace_title">Delete GPS Trace</string>
     <string name="confirm_delete">Are you sure you want to delete this trace?</string>
     <string name="positive_delete">Delete</string>
     <string name="negative_delete">Cancel</string>

@@ -1,21 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="colorPrimary">#aeaeae</color>
-    <color name="colorPrimaryDark">#3c3c3d</color>
-    <color name="colorAccent">#00ffae</color>
+    <color name="color_primary">#aeaeae</color>
+    <color name="color_primary_dark">#3c3c3d</color>
+    <color name="color_accent">#00ffae</color>
 
-    <color name="scapeColor">#00ffae</color>
-    <color name="scapeBlue">#223352</color>
+    <color name="scape_color">#00ffae</color>
+    <color name="scape_blue">#223352</color>
 
-    <color name="colorGrey">#616161</color>
-    <color name="colorWhite">#FFFFFF</color>
+    <color name="color_white">#FFFFFF</color>
+    <color name="color_grey">#616161</color>
+    <color name="lighter_grey">#ddd</color>
+    <color name="red">#ff0000</color>
 
     <color name="fab_color_go">#00ffae</color>
     <color name="fab_color_pause">#08885E</color>
     <color name="fab_color_stop">#223352</color>
+
     <color name="text_color_black">#111</color>
     <color name="text_color_black_light">#222</color>
-
-    <color name="colorGray">#979F9D</color>
-    <color name="lighterGray">#ddd</color>
 </resources>

@@ -14,6 +14,7 @@ import com.scape.pixscape.models.dto.GpsTrace
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.PolylineOptions
 import com.scape.pixscape.fragments.CameraFragment
 import com.scape.pixscape.models.dto.ScapeTrace
@@ -35,6 +36,9 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     private fun fillMap() {
         try {
             googleMap.clear()
+
+            val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json)
+            googleMap?.setMapStyle(mapStyleOptions)
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google map", "fillMap() invoked with uninitialized googleMap")
             return
@@ -50,7 +54,7 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
         for (i in 0 until scapeRouteSections.size) {
             googleMap.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
                                                         scapeRouteSections[i].end.toLatLng())
-                                          .color(ContextCompat.getColor(baseContext!!, R.color.scapeColor))
+                                          .color(ContextCompat.getColor(baseContext!!, R.color.scape_color))
                                           .width(10f))
         }
 

@@ -126,7 +126,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
 
         val currentContext = context ?: return
 
-        val scapeColor = ContextCompat.getColor(currentContext, R.color.scapeColor)
+        val scapeColor = ContextCompat.getColor(currentContext, R.color.scape_color)
 
         //listener to viewpager scroll page
         view_pager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {

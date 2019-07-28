@@ -30,7 +30,7 @@ import kotlinx.android.synthetic.main.fragment_track_trace.*
 
 internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
-    private lateinit var map: GoogleMap
+    private lateinit var fullMap: GoogleMap
 
     companion object {
         private var gpsRouteSections: List<RouteSection> = ArrayList()
@@ -59,6 +59,8 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         }
     }
 
+    // region Private
+
     private fun vectorToBitmap(id: Int, color: Int) : BitmapDescriptor {
         val vectorDrawable = ResourcesCompat.getDrawable(resources, id, null)
         val bitmap = Bitmap.createBitmap(vectorDrawable!!.intrinsicWidth,
@@ -74,17 +76,17 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     private fun placeMarkerOnMap(location: LatLng, color: Int) {
         val markerOptions = MarkerOptions().position(location)
         markerOptions.icon(vectorToBitmap(R.drawable.gps_user_location, color))
-        map.addMarker(markerOptions)
+        fullMap.addMarker(markerOptions)
     }
 
     @SuppressLint("MissingPermission")
     private fun setUpMap() {
         if (context == null) return
 
-        map.isMyLocationEnabled = false
+        fullMap.isMyLocationEnabled = false
 
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
-        map.setMapStyle(mapStyleOptions)
+        fullMap.setMapStyle(mapStyleOptions)
 
         LocationServices.getFusedLocationProviderClient(activity!!)
                 .lastLocation
@@ -94,57 +96,59 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
                                 .target(LatLng(it.latitude, it.longitude))
                                 .zoom(15.0f)
                                 .build()
-                        map.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+                        fullMap.animateCamera(CameraUpdateFactory.newCameraPosition(position))
             }
         }
     }
 
     private fun fillMap() {
         try {
-            map.clear()
+            fullMap.clear()
         } catch (ex: UninitializedPropertyAccessException) {
-            Log.w("Google map", "fillMap() invoked with uninitialized map")
+            Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
             return
         }
 
         for (i in 0 until gpsRouteSections.size) {
-            map.addPolyline(PolylineOptions().add(gpsRouteSections[i].beginning.toLatLng(),
-                                                  gpsRouteSections[i].end.toLatLng())
+            fullMap.addPolyline(PolylineOptions().add(gpsRouteSections[i].beginning.toLatLng(),
+                                                      gpsRouteSections[i].end.toLatLng())
                                     .color(ContextCompat.getColor(context!!, R.color.text_color_black))
                                     .width(10f))
         }
 
         if (gpsRouteSections.isNotEmpty()) {
-            placeMarkerOnMap(gpsRouteSections.last().end.toLatLng(), R.color.colorPrimaryDark)
+            placeMarkerOnMap(gpsRouteSections.last().end.toLatLng(), R.color.color_primary_dark)
 
-            map.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
-                                                                18f))
+            fullMap.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
+                                                                    18f))
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            map.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
-                                                  scapeRouteSections[i].end.toLatLng())
-                                    .color(ContextCompat.getColor(context!!, R.color.scapeColor))
+            fullMap.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
+                                                      scapeRouteSections[i].end.toLatLng())
+                                    .color(ContextCompat.getColor(context!!, R.color.scape_color))
                                     .width(10f))
         }
 
         if (scapeRouteSections.isNotEmpty()) {
-            placeMarkerOnMap(scapeRouteSections.last().end.toLatLng(), R.color.scapeColor)
+            placeMarkerOnMap(scapeRouteSections.last().end.toLatLng(), R.color.scape_color)
 
-            map.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
-                                                                18f))
+            fullMap.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
+                                                                    18f))
         }
     }
+
+    // endregion
 
     // region Google Maps
 
     override fun onMarkerClick(marker: Marker?) = false
 
     override fun onMapReady(googleMap: GoogleMap) {
-        map = googleMap
+        fullMap = googleMap
 
-        map.uiSettings.isZoomControlsEnabled = false
-        map.setOnMarkerClickListener(this)
+        fullMap.uiSettings.isZoomControlsEnabled = false
+        fullMap.setOnMarkerClickListener(this)
 
         setUpMap()
     }
@@ -152,6 +156,30 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     // endregion Google Maps
 
     // region Fragment
+
+    override fun onResume() {
+        super.onResume()
+
+        full_map_view.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        full_map_view.onPause()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        full_map_view.onDestroy()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+
+        full_map_view.onLowMemory()
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         return inflater.inflate(R.layout.fragment_track_trace, container, false)
@@ -168,9 +196,9 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
 
         try {
-            track_map.onCreate(savedInstanceState)
-            track_map.onResume()
-            track_map.getMapAsync(this)
+            full_map_view.onCreate(savedInstanceState)
+            full_map_view.onResume()
+            full_map_view.getMapAsync(this)
         } catch (ex: Resources.NotFoundException) {
             Log.e("Google Map", "Resources\$NotFoundException")
         }

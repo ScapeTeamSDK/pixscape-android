@@ -2,7 +2,6 @@ package com.scape.pixscape.view
 
 import android.animation.ArgbEvaluator
 import android.content.Context
-import android.content.Intent
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -15,7 +14,8 @@ import androidx.core.content.ContextCompat
 import androidx.viewpager.widget.ViewPager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.scape.pixscape.R
-import com.scape.pixscape.services.TrackTraceService
+import com.scape.pixscape.activities.MainActivity
+import com.scape.pixscape.utils.setSystemBarTheme
 import kotlinx.android.synthetic.main.view_pager_tabs.view.*
 
 internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
@@ -103,8 +103,8 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
         viewTabIndicator = view.findViewById(R.id.view_tab_indicator)
 
         //color
-        centerColor = ContextCompat.getColor(context, R.color.colorWhite)
-        sideColor = ContextCompat.getColor(context, R.color.colorGrey)
+        centerColor = ContextCompat.getColor(context, R.color.color_white)
+        sideColor = ContextCompat.getColor(context, R.color.color_grey)
 
         //method to graduate color
         argbEvaluator = ArgbEvaluator()
@@ -177,6 +177,8 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
                 moveAndScaleCenter(fractionFromCenter)
 
                 viewTabIndicator.translationX = ((positionOffset - 1) * centerPadding)
+
+                (context as MainActivity).setSystemBarTheme(false)
             }
             1 -> {
                 setColor(positionOffset)
@@ -184,6 +186,11 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
                 moveAndScaleCenter(positionOffset)
 
                 viewTabIndicator.translationX = (positionOffset * centerPadding)
+
+                (context as MainActivity).setSystemBarTheme(true)
+            }
+            2 -> {
+                (context as MainActivity).setSystemBarTheme(false)
             }
         }
     }
