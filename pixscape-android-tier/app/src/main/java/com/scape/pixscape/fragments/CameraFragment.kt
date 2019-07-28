@@ -2,6 +2,7 @@ package com.scape.pixscape.fragments
 
 import android.annotation.SuppressLint
 import android.content.*
+import android.location.Location
 import android.os.Bundle
 import android.os.Parcelable
 import android.os.SystemClock
@@ -14,6 +15,11 @@ import android.widget.RelativeLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.viewpager.widget.ViewPager
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.maps.*
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.scape.capture.preview.CapturePreviewObserver
 import com.scape.pixscape.PixscapeApplication
 import com.scape.pixscape.R
@@ -22,14 +28,18 @@ import com.scape.pixscape.adapter.ViewPagerAdapter
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import kotlinx.android.synthetic.main.camera_ui_container.*
+import kotlinx.android.synthetic.main.fragment_camera.*
 import kotlinx.android.synthetic.main.view_pager_tabs.*
 
 enum class TimerState { Idle, Running, Paused }
 
-internal class CameraFragment : Fragment() {
+internal class CameraFragment : Fragment(), OnMapReadyCallback {
 
     private lateinit var container: RelativeLayout
     private lateinit var viewFinder: SurfaceView
+
+    private var miniMapView: MapView? = null
+    private var miniMap: GoogleMap? = null
 
     private var mPreview: CapturePreviewObserver? = null
 
@@ -94,6 +104,8 @@ internal class CameraFragment : Fragment() {
         }
     }
 
+    // region Private
+
     /** Method used to re-draw the camera UI controls, called every time configuration changes */
     @SuppressLint("RestrictedApi")
     private fun updateCameraUi() {
@@ -126,17 +138,20 @@ internal class CameraFragment : Fragment() {
                         //while paage scroll to screen 1 positionoffset go up, so alpha go down
                         main_view.alpha = (1 - positionOffset)
 
-                        // hide all play/pause/stop buttons and timer when not on main screen
+                        // hide all play/pause/stop buttons, timer and minimap when not on main screen
                         play_timer_button.hide()
                         pause_timer_button.hide()
                         stop_timer_button.hide()
 
-                        time?.visibility = View.GONE
+                        time.visibility = View.GONE
+                        card_view_minimap_container.visibility = View.GONE
                     }
                     1 -> {
                         main_view.setBackgroundColor(scapeColor)
                         //default posotionOfSet is 0, while page scroll to 2, go up, so aplha up
                         main_view.alpha = positionOffset
+
+                        card_view_minimap_container.visibility = View.VISIBLE
 
                         when (timerState) {
                             TimerState.Idle   -> {
@@ -144,28 +159,29 @@ internal class CameraFragment : Fragment() {
 
                                 play_timer_button.show()
 
-                                time?.visibility = View.VISIBLE
+                                time.visibility = View.VISIBLE
                             }
                             TimerState.Paused -> {
                                 play_timer_button.show()
                                 stop_timer_button.show()
 
-                                time?.visibility = View.VISIBLE
+                                time.visibility = View.VISIBLE
                             }
                             TimerState.Running -> {
                                 pause_timer_button.show()
 
-                                time?.visibility = View.VISIBLE
+                                time.visibility = View.VISIBLE
                             }
                         }
                     }
                     2-> {
-                        // hide all play/pause/stop buttons and timer when not on main screen
+                        // hide all play/pause/stop buttons, timer and minimap when not on main screen
                         play_timer_button.hide()
                         pause_timer_button.hide()
                         stop_timer_button.hide()
 
-                        time?.visibility = View.GONE
+                        time.visibility = View.GONE
+                        card_view_minimap_container.visibility = View.GONE
                     }
                 }
             }
@@ -205,7 +221,7 @@ internal class CameraFragment : Fragment() {
 
         stopForegroundTrackService()
 
-        // map.clear()
+        miniMap?.clear()
 
         time.base = SystemClock.elapsedRealtime()
 
@@ -311,6 +327,35 @@ internal class CameraFragment : Fragment() {
         }
     }
 
+    @SuppressLint("MissingPermission")
+    private fun setupMiniMapView() {
+        miniMapView?.isClickable = false
+
+        miniMap?.uiSettings?.isZoomControlsEnabled = false
+        miniMap?.uiSettings?.isCompassEnabled = false
+        miniMap?.uiSettings?.isZoomGesturesEnabled = false
+        miniMap?.uiSettings?.isScrollGesturesEnabled = false
+        miniMap?.uiSettings?.isMapToolbarEnabled = false
+        miniMap?.isMyLocationEnabled = false
+
+        val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
+        miniMap?.setMapStyle(mapStyleOptions)
+
+        LocationServices.getFusedLocationProviderClient(activity!!)
+                .lastLocation
+                .addOnSuccessListener { location: Location? ->
+                    location?.let {
+                        val position = CameraPosition.Builder()
+                                .target(LatLng(it.latitude, it.longitude))
+                                .zoom(15.0f)
+                                .build()
+                        miniMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+                    }
+                }
+    }
+
+    // endregion
+
     // region Fragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -320,6 +365,37 @@ internal class CameraFragment : Fragment() {
 
         // start client here to ensure that we have GPS updates as soon as possible
         PixscapeApplication.sharedInstance?.scapeClient?.start({}, { error -> Log.e("CameraFragment", error)})
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        miniMapView?.onResume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+
+        miniMapView?.onPause()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        miniMapView?.onDestroy()
+    }
+
+    override fun onLowMemory() {
+        super.onLowMemory()
+
+        miniMapView?.onLowMemory()
+    }
+
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
+                              savedInstanceState: Bundle?): View? {
+
+        // Inflate the layout for this fragment
+        return inflater.inflate(R.layout.fragment_camera, container, false)
     }
 
     override fun onDestroyView() {
@@ -339,19 +415,18 @@ internal class CameraFragment : Fragment() {
         }
     }
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
-
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_camera, container, false)
-    }
-
     @SuppressLint("MissingPermission")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         container = view as RelativeLayout
         viewFinder = container.findViewById(R.id.view_finder)
+
+        miniMapView = container.findViewById(R.id.mini_map_view)
+        miniMapView?.onCreate(savedInstanceState)
+
+        miniMapView?.getMapAsync(this)
+        MapsInitializer.initialize(context)
 
         mPreview = CapturePreviewObserver(viewFinder, 0).apply { lifecycle.addObserver(this) }
 
@@ -375,5 +450,15 @@ internal class CameraFragment : Fragment() {
     }
 
     // endregion Fragment
+
+    // region GoogleMap
+
+    override fun onMapReady(map: GoogleMap?) {
+        miniMap = map
+
+        setupMiniMapView()
+    }
+
+    // endregion
 
 }

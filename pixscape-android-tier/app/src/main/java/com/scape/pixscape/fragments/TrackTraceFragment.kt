@@ -83,6 +83,9 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
 
         map.isMyLocationEnabled = false
 
+        val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
+        map.setMapStyle(mapStyleOptions)
+
         LocationServices.getFusedLocationProviderClient(activity!!)
                 .lastLocation
                 .addOnSuccessListener { location: Location? ->

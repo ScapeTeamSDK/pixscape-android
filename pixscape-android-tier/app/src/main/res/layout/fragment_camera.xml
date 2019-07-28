@@ -1,14 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/camera_container"
     android:background="@android:color/black"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <androidx.cardview.widget.CardView
+        android:id="@+id/card_view_minimap_container"
+        android:layout_width="100dp"
+        android:layout_height="150dp"
+        android:layout_alignParentRight="true"
+        android:layout_marginRight="15dp"
+        android:layout_marginTop="30dp"
+        app:cardCornerRadius="15dp"
+        app:cardElevation="3dp">
+
+        <com.google.android.gms.maps.MapView
+            android:id="@+id/mini_map_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            app:liteMode="true"
+            app:mapType="normal"/>
+    </androidx.cardview.widget.CardView>
+
     <SurfaceView
         android:id="@+id/view_finder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"/>
 
 </RelativeLayout>
