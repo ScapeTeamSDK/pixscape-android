@@ -34,6 +34,7 @@
         tools:ignore="GoogleAppIndexingWarning">
 
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
+        <uses-library android:name="com.google.android.maps" />
 
         <!-- Declare notch support -->
         <meta-data android:name="android.notch_support" android:value="true"/>

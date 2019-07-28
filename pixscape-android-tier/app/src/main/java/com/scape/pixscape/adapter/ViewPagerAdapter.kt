@@ -14,14 +14,14 @@ internal class ViewPagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm, 
         //tabview position
         return when (position) {
             0 -> TraceHistoryFragment()
-            1 -> EmptyFragment()
+            1 -> EmptyFragment() // we will create the CameraFragment via the navgraph after ensuring all permissions have been granted
             2 -> TrackTraceFragment()
             else -> EmptyFragment()
         }
     }
 
     override fun getCount(): Int {
-        //number of screen
+        //number of screens
         return 3
     }
 }

@@ -11,6 +11,7 @@ import android.content.SharedPreferences
 import android.os.Build
 import android.os.IBinder
 import android.os.Parcelable
+import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
 import com.scape.pixscape.PixscapeApplication
@@ -19,14 +20,14 @@ import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_GPS_LOCATION
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_SCAPE_LOCATION
+import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_STOP_TIMER
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_TIME
+import com.scape.pixscape.fragments.CameraFragment.Companion.CONTINUOUS_MODE
 import com.scape.pixscape.models.dto.RouteSection
-import com.scape.pixscape.view.MainTabView.Companion.CONTINUOUS_MODE
 import com.scape.scapekit.*
 import java.util.*
 import java.util.Timer
 import java.util.concurrent.TimeUnit
-import android.util.Log
 
 class TrackTraceService : Service(), ScapeSessionObserver {
 
@@ -120,33 +121,48 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     private inner class UpdateNotificationTask : TimerTask() {
         override fun run() {
             if (!paused) {
+
                 val notificationIntent = Intent(context, MainActivity::class.java)
                 val pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
 
-                val timeFormatted =
-                    if (currentTimeInMillis >= 3600000)
-                        String.format(
-                            "%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(currentTimeInMillis),
-                            TimeUnit.MILLISECONDS.toMinutes(currentTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
-                            TimeUnit.MILLISECONDS.toSeconds(currentTimeInMillis) % TimeUnit.MINUTES.toSeconds(1)
-                        )
-                    else
-                        String.format(
-                            "%02d:%02d",
-                            TimeUnit.MILLISECONDS.toMinutes(currentTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
-                            TimeUnit.MILLISECONDS.toSeconds(currentTimeInMillis) % TimeUnit.MINUTES.toSeconds(1)
-                        )
+                var notification: Notification?
+                var distance: Double
 
-                // use gpsLocations instead of scapeLocations as we will probably have more of them
-                val distance = Math.round(gpsLocations.sumByDouble { section -> section.distance.toDouble() } * 100.0) / 100.0
+                if(isContinuousModeEnabled) {
+                    val timeFormatted =
+                            if (currentTimeInMillis >= 3600000)
+                                String.format(
+                                        "%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(currentTimeInMillis),
+                                        TimeUnit.MILLISECONDS.toMinutes(currentTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
+                                        TimeUnit.MILLISECONDS.toSeconds(currentTimeInMillis) % TimeUnit.MINUTES.toSeconds(1)
+                                             )
+                            else
+                                String.format(
+                                        "%02d:%02d",
+                                        TimeUnit.MILLISECONDS.toMinutes(currentTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
+                                        TimeUnit.MILLISECONDS.toSeconds(currentTimeInMillis) % TimeUnit.MINUTES.toSeconds(1)
+                                             )
 
-                val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-                        .setContentTitle(getString(R.string.notification_title))
-                        .setContentText(timeFormatted.plus(" ").plus(distance.toString()))
-                        .setSmallIcon(R.drawable.ic_play_arrow)
-                        .setContentIntent(pendingIntent)
-                        .setAutoCancel(true)
-                        .build()
+                    // use gpsLocations instead of scapeLocations as we will probably have more of them
+                    distance = Math.round(gpsLocations.sumByDouble { section -> section.distance.toDouble() } * 100.0) / 100.0
+
+                    notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                            .setContentTitle(getString(R.string.notification_title))
+                            .setContentText(timeFormatted.plus(" ").plus(distance.toString()))
+                            .setSmallIcon(R.drawable.ic_play_arrow)
+                            .setContentIntent(pendingIntent)
+                            .setAutoCancel(true)
+                            .build()
+                } else {
+                    // don't compute distance and time if single mode is enabled
+
+                    notification = NotificationCompat.Builder(context, CHANNEL_ID)
+                            .setContentTitle(getString(R.string.notification_title))
+                            .setSmallIcon(R.drawable.ic_play_arrow)
+                            .setContentIntent(pendingIntent)
+                            .setAutoCancel(true)
+                            .build()
+                }
 
                 val mNotificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                 mNotificationManager.notify(NOTIFICATION_ID, notification)
@@ -163,9 +179,9 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     override fun onCreate() {
         super.onCreate()
 
-        // We create a default dummy notitifcation which allows us to call properly startForeground
-        // Calling startForeground here is done only so when stopSelf is called, Android does not crash on us
-        // with a fatal exception TODO test on Android Nougat and Lollipop devices
+        // We create a default dummy notitifcation which allows us to call startForeground as early as possible and in a clean manner
+        // so when stopSelf is called, Android does not crash on us with a fatal exception
+        // TODO test on Android Nougat and Lollipop devices
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val defaultNotification = NotificationCompat.Builder(this, CHANNEL_ID)
@@ -201,8 +217,10 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        isContinuousModeEnabled = intent?.getBooleanExtra(CONTINUOUS_MODE, false) ?: false
+        val continuousModeEnabled = false
+        isContinuousModeEnabled = intent?.getBooleanExtra(CONTINUOUS_MODE, continuousModeEnabled) ?: false
         startTrackService(isContinuousModeEnabled)
+
         return START_NOT_STICKY
     }
 
@@ -336,7 +354,12 @@ class TrackTraceService : Service(), ScapeSessionObserver {
             // single mode has been enabled and we have not received any  valid scape measurements
             // in most cases it means we had GPS measurements but no scape ones
             // so stop the service here
-            stopService()
+            //stopService()
+
+            val intent = Intent()
+            intent.action = BROADCAST_ACTION_STOP_TIMER
+
+            sendBroadcast(intent)
         }
     }
 

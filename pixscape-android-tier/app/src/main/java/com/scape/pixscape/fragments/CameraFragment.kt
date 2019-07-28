@@ -1,7 +1,6 @@
 package com.scape.pixscape.fragments
 
 import android.annotation.SuppressLint
-import android.app.Activity
 import android.content.*
 import android.os.Bundle
 import android.os.Parcelable
@@ -15,14 +14,13 @@ import android.widget.RelativeLayout
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.viewpager.widget.ViewPager
+import com.scape.capture.preview.CapturePreviewObserver
 import com.scape.pixscape.PixscapeApplication
 import com.scape.pixscape.R
 import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.ViewPagerAdapter
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
-import com.scape.pixscape.view.MainTabView
-import com.scape.capture.preview.CapturePreviewObserver
 import kotlinx.android.synthetic.main.camera_ui_container.*
 import kotlinx.android.synthetic.main.view_pager_tabs.*
 
@@ -38,6 +36,9 @@ internal class CameraFragment : Fragment() {
     private var sharedPref: SharedPreferences? = null
 
     companion object {
+        private var isContinuousModeEnabled: Boolean = false
+        const val CONTINUOUS_MODE = "com.scape.pixscape.view.maintabview.continuousmode"
+
         const val BROADCAST_ACTION_TIME = "com.scape.pixscape.camerafragment.broadcastreceivertime"
         const val BROADCAST_ACTION_GPS_LOCATION = "com.scape.pixscape.camerafragment.broadcastreceivergpslocation"
         const val BROADCAST_ACTION_SCAPE_LOCATION = "com.scape.pixscape.camerafragment.broadcastreceiverscapelocation"
@@ -46,8 +47,6 @@ internal class CameraFragment : Fragment() {
         const val ROUTE_GPS_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routegpssectionsdatakey"
         const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routescapesectionsdatakey"
         const val MODE_DATA_KEY = "com.scape.pixscape.camerafragment.modedatakey"
-
-        private const val REQUEST_CHECK_SETTINGS = 2
 
         private var timerState = TimerState.Idle
         private var measuredTimeInMillis = 0L
@@ -85,7 +84,11 @@ internal class CameraFragment : Fragment() {
                     }
                 }
                 BROADCAST_ACTION_STOP_TIMER   -> {
-                    stopTimer()
+                    stopTimerAndForegroundService()
+
+                    if(isContinuousModeEnabled) {
+                        startTrackTraceActivity()
+                    }
                 }
             }
         }
@@ -174,27 +177,54 @@ internal class CameraFragment : Fragment() {
 
     }
 
-    private fun stopTimer(){
+    private fun startForegroundTrackService(isContinuousModeEnabled: Boolean) {
+        CameraFragment.isContinuousModeEnabled = isContinuousModeEnabled
+
+        val intentFilter = IntentFilter()
+        intentFilter.addAction(BROADCAST_ACTION_GPS_LOCATION)
+        intentFilter.addAction(BROADCAST_ACTION_SCAPE_LOCATION)
+        intentFilter.addAction(BROADCAST_ACTION_TIME)
+        intentFilter.addAction(BROADCAST_ACTION_STOP_TIMER)
+
+        activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
+
+        val intent = Intent(context,
+                            TrackTraceService::class.java).putExtra(CONTINUOUS_MODE,
+                                                                    isContinuousModeEnabled)
+        ContextCompat.startForegroundService(context!!, intent)
+    }
+
+    private fun stopForegroundTrackService() {
+        activity?.stopService(Intent(context, TrackTraceService::class.java))
+
+        activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
+    }
+
+    private fun stopTimerAndForegroundService(){
         timerState = TimerState.Idle
 
-        activity?.stopService(Intent(context, TrackTraceService::class.java))
-        activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
+        stopForegroundTrackService()
 
-        @Suppress("UNCHECKED_CAST") val localGpsRouteSections = gpsRouteSections as ArrayList<Parcelable>
-        @Suppress("UNCHECKED_CAST") val localScapeRouteSections = scapeRouteSections as ArrayList<Parcelable>
-
-        gpsRouteSections = ArrayList()
-        scapeRouteSections = ArrayList()
-
-        //map.clear()
+        // map.clear()
 
         time.base = SystemClock.elapsedRealtime()
 
         pause_timer_button.hide()
         stop_timer_button.hide()
-        play_timer_button.show()
 
-        view_switch_bottom.visibility = View.VISIBLE
+        if(isContinuousModeEnabled) {
+            play_timer_button.show()
+
+            view_switch_bottom.visibility = View.VISIBLE
+        }
+    }
+
+    private fun startTrackTraceActivity() {
+        @Suppress("UNCHECKED_CAST") val localGpsRouteSections = gpsRouteSections as ArrayList<Parcelable>
+        @Suppress("UNCHECKED_CAST") val localScapeRouteSections = scapeRouteSections as ArrayList<Parcelable>
+
+        gpsRouteSections = ArrayList()
+        scapeRouteSections = ArrayList()
 
         if (localGpsRouteSections.size < 1) return
 
@@ -229,6 +259,14 @@ internal class CameraFragment : Fragment() {
     }
 
     private fun bindings() {
+        view_camera_center.setOnClickListener {
+            if (view_pager.currentItem != 1) {
+                view_pager.currentItem = 1
+            } else if(!view_switch_bottom.isChecked) {
+                startForegroundTrackService(false)
+            }
+        }
+
         play_timer_button.setOnClickListener {
             if(timerState == TimerState.Idle) {
                 timerState = TimerState.Running
@@ -239,16 +277,8 @@ internal class CameraFragment : Fragment() {
 
                 view_switch_bottom.visibility = View.GONE
 
-                val intentFilter = IntentFilter()
-                intentFilter.addAction(BROADCAST_ACTION_GPS_LOCATION)
-                intentFilter.addAction(BROADCAST_ACTION_SCAPE_LOCATION)
-                intentFilter.addAction(BROADCAST_ACTION_TIME)
-                intentFilter.addAction(BROADCAST_ACTION_STOP_TIMER)
+                startForegroundTrackService(true)
 
-                activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
-
-                val intent = Intent(context, TrackTraceService::class.java).putExtra(MainTabView.CONTINUOUS_MODE, true)
-                ContextCompat.startForegroundService(context!!, intent)
             } else if(timerState == TimerState.Paused) {
                 timerState = TimerState.Running
 
@@ -273,7 +303,10 @@ internal class CameraFragment : Fragment() {
         }
 
         stop_timer_button.setOnLongClickListener {
-            stopTimer()
+            stopTimerAndForegroundService()
+
+            startTrackTraceActivity()
+
             return@setOnLongClickListener true
         }
     }

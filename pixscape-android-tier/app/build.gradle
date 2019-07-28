@@ -41,8 +41,6 @@ android {
             resValue "string", "google_maps_key", GoogleMapsApiKey
         }
     }
-
-
 }
 
 dependencies {
@@ -87,10 +85,6 @@ dependencies {
     // Kotlin Android Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.0.0-RC1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.0.0-RC1'
-
-    // CameraX
-    implementation "androidx.camera:camera-core:$camerax_version"
-    implementation "androidx.camera:camera-camera2:$camerax_version"
 
     // Testing
     testImplementation 'junit:junit:4.12'

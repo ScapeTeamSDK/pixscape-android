@@ -40,10 +40,6 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
     private var centerPadding = 0
     private var centerTranslationY = 0
 
-    companion object {
-        const val CONTINUOUS_MODE = "com.scape.pixscape.view.maintabview.continuousmode"
-    }
-
     constructor(context: Context) :
             this(context, null)
 
@@ -65,16 +61,6 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
         historyViewLeftTab.setOnClickListener {
             if (viewPager.currentItem != 0) {
                 viewPager.currentItem = 0
-            }
-        }
-
-        cameraViewCenterTab.setOnClickListener {
-            if (viewPager.currentItem != 1) {
-                viewPager.currentItem = 1
-            } else if(!toggleModeBottomSwitch.isChecked) {
-                val intent = Intent(context, TrackTraceService::class.java).putExtra(CONTINUOUS_MODE, false)
-
-                ContextCompat.startForegroundService(context!!, intent)
             }
         }
 
