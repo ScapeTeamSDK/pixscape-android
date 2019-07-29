@@ -73,7 +73,7 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
         toggleModeBottomSwitch.setOnCheckedChangeListener { _, isChecked ->
             when(isChecked) {
                 true -> {
-                    toggleModeBottomSwitch.text = "Continuous"
+                    toggleModeBottomSwitch.text = "Trace"
 
                     startTimerButton.show()
                     time?.visibility = View.VISIBLE

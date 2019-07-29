@@ -342,9 +342,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
         miniMap?.setMapStyle(mapStyleOptions)
 
-        val waterMark: View? = miniMapView?.findViewWithTag("GoogleWatermark")
-        waterMark?.visibility = View.GONE
-
         LocationServices.getFusedLocationProviderClient(activity!!)
                 .lastLocation
                 .addOnSuccessListener { location: Location? ->
@@ -356,6 +353,13 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
                         miniMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))
                     }
                 }
+
+
+        val waterMark: View = miniMapView?.findViewWithTag("GoogleWatermark") ?: return
+        waterMark.scaleX = 0.5f
+        waterMark.scaleY = 0.5f
+        waterMark.translationX = -30f
+        waterMark.translationY = 15f
     }
 
     // endregion
