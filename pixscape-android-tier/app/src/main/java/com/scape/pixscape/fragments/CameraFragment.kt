@@ -2,7 +2,8 @@ package com.scape.pixscape.fragments
 
 import android.annotation.SuppressLint
 import android.content.*
-import android.icu.util.ValueIterator
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.location.Location
 import android.os.Bundle
 import android.os.Parcelable
@@ -14,16 +15,17 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.RelativeLayout
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.viewpager.widget.ViewPager
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.*
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.maps.model.*
 import com.scape.capture.preview.CapturePreviewObserver
 import com.scape.pixscape.PixscapeApplication
 import com.scape.pixscape.R
+import com.scape.pixscape.activities.MainActivity
 import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.ViewPagerAdapter
 import com.scape.pixscape.models.dto.RouteSection
@@ -34,7 +36,7 @@ import kotlinx.android.synthetic.main.view_pager_tabs.*
 
 enum class TimerState { Idle, Running, Paused }
 
-internal class CameraFragment : Fragment(), OnMapReadyCallback {
+internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private lateinit var container: RelativeLayout
     private lateinit var viewFinder: SurfaceView
@@ -79,20 +81,22 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
                 BROADCAST_ACTION_GPS_LOCATION -> {
                     if (activity == null) return
                     gpsRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_GPS_SECTIONS_DATA_KEY)
-                    context?.let {
-                        distanceInMeters = gpsRouteSections.sumByDouble { section -> section.distance.toDouble() }
 
-                        if (sharedPref == null) return
-                    }
+                    distanceInMeters = gpsRouteSections.sumByDouble { section -> section.distance.toDouble() }
+
+                    fillMap()
+
+                    if (sharedPref == null) return
                 }
                 BROADCAST_ACTION_SCAPE_LOCATION -> {
                     if (activity == null) return
                     scapeRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_SCAPE_SECTIONS_DATA_KEY)
-                    context?.let {
-                        // don't compute metrics for scape routes
 
-                        if (sharedPref == null) return
-                    }
+                    fillMap()
+
+                    // don't compute metrics for scape routes
+
+                    if (sharedPref == null) return
                 }
                 BROADCAST_ACTION_STOP_TIMER   -> {
                     stopTimerAndForegroundService()
@@ -109,7 +113,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
 
     /** Method used to re-draw the camera UI controls, called every time configuration changes */
     @SuppressLint("RestrictedApi")
-    private fun updateCameraUi() {
+    private fun views() {
         // Inflate a new view containing all UI for controlling the camera
         val cameraUiContainer = View.inflate(requireContext(), R.layout.camera_ui_container, container)
 
@@ -217,7 +221,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
         activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
     }
 
-    private fun stopTimerAndForegroundService(){
+    private fun stopTimerAndForegroundService() {
         timerState = TimerState.Idle
 
         stopForegroundTrackService()
@@ -328,8 +332,26 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
         }
     }
 
+    private fun vectorToBitmap(id: Int, color: Int) : BitmapDescriptor {
+        val vectorDrawable = ResourcesCompat.getDrawable(resources, id, null)
+        val bitmap = Bitmap.createBitmap(vectorDrawable!!.intrinsicWidth,
+                                         vectorDrawable.intrinsicHeight,
+                                         Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
+        DrawableCompat.setTint(vectorDrawable, color)
+        vectorDrawable.draw(canvas)
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
+    }
+
+    private fun placeMarkerOnMap(location: LatLng, color: Int) {
+        val markerOptions = MarkerOptions().position(location)
+        markerOptions.icon(vectorToBitmap(R.drawable.gps_user_location, resources.getColor(color)))
+        miniMap?.addMarker(markerOptions)
+    }
+
     @SuppressLint("MissingPermission")
-    private fun setupMiniMapView() {
+    private fun setupMiniMap() {
         miniMapView?.isClickable = false
 
         miniMap?.uiSettings?.isZoomControlsEnabled = false
@@ -338,6 +360,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
         miniMap?.uiSettings?.isScrollGesturesEnabled = false
         miniMap?.uiSettings?.isMapToolbarEnabled = false
         miniMap?.isMyLocationEnabled = false
+
+        miniMap?.setOnMarkerClickListener(this)
 
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
         miniMap?.setMapStyle(mapStyleOptions)
@@ -362,14 +386,49 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
         waterMark.translationY = 15f
     }
 
+    private fun fillMap() {
+        try {
+            miniMap?.clear()
+        } catch (ex: UninitializedPropertyAccessException) {
+            Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
+            return
+        }
+
+        for (i in 0 until gpsRouteSections.size) {
+            miniMap?.addPolyline(PolylineOptions().add(gpsRouteSections[i].beginning.toLatLng(),
+                                                       gpsRouteSections[i].end.toLatLng())
+                                        .color(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                        .width(10f))
+        }
+
+        if (gpsRouteSections.isNotEmpty()) {
+            placeMarkerOnMap(gpsRouteSections.last().end.toLatLng(), R.color.color_primary_dark)
+
+            miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
+                                                                     18f))
+        }
+
+        for (i in 0 until scapeRouteSections.size) {
+            miniMap?.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
+                                                      scapeRouteSections[i].end.toLatLng())
+                                        .color(ContextCompat.getColor(context!!, R.color.scape_color))
+                                        .width(10f))
+        }
+
+        if (scapeRouteSections.isNotEmpty()) {
+            placeMarkerOnMap(scapeRouteSections.last().end.toLatLng(), R.color.scape_color)
+
+            miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
+                                                                     18f))
+        }
+    }
+
     // endregion
 
     // region Fragment
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Mark this as a retain fragment, so the lifecycle does not get restarted on config change
-        retainInstance = true
 
         // start client here to ensure that we have GPS updates as soon as possible
         PixscapeApplication.sharedInstance?.scapeClient?.start({}, { error -> Log.e("CameraFragment", error)})
@@ -434,14 +493,14 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
         miniMapView?.onCreate(savedInstanceState)
 
         miniMapView?.getMapAsync(this)
-        MapsInitializer.initialize(context)
+        MapsInitializer.initialize(activity as MainActivity)
 
         mPreview = CapturePreviewObserver(viewFinder, 0).apply { lifecycle.addObserver(this) }
 
         // Wait for the views to be properly laid out
         viewFinder.post {
             // Build UI controls and bind all camera use cases
-            updateCameraUi()
+            views()
 
             restoreTimerState()
 
@@ -461,10 +520,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback {
 
     // region GoogleMap
 
+    override fun onMarkerClick(marker: Marker?) = false
+
     override fun onMapReady(map: GoogleMap?) {
         miniMap = map
 
-        setupMiniMapView()
+        setupMiniMap()
     }
 
     // endregion

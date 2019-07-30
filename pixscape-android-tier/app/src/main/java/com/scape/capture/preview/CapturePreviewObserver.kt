@@ -90,7 +90,7 @@ internal class CapturePreviewObserver(private val surfaceView: SurfaceView,
             eglCore = EglCore()
             CameraExtensions.openCamera(deviceRotation).let { (cam, rotation) ->
                 camera = cam
-                camera?.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)
+                camera?.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)
                 cameraRotation = rotation
             }
         }
@@ -200,12 +200,12 @@ internal class CapturePreviewObserver(private val surfaceView: SurfaceView,
 
         try {
             frameProcessingExecutor?.checkShutdown()?.execute {
+                val intrinsics = cameraIntrinsics ?: return@execute
+
                 val width = this.cameraPreviewDimens.width
                 val height = this.cameraPreviewDimens.height
 
                 decodeYUV(callbackBuffer, width, height)
-
-                val intrinsics = cameraIntrinsics ?: return@execute
 
                 val scapeClient = PixscapeApplication.sharedInstance?.scapeClient
                 scapeClient?.scapeSession?.setCameraIntrinsics(intrinsics.focalLengthX,
@@ -219,7 +219,7 @@ internal class CapturePreviewObserver(private val surfaceView: SurfaceView,
         }
     }
 
-    // Runs on arbitary thread(camera)
+    @Synchronized
     private fun decodeYUV(yuv: ByteArray, width: Int, height: Int) {
         val size = width * height
 
@@ -270,6 +270,11 @@ internal class CapturePreviewObserver(private val surfaceView: SurfaceView,
     private fun releaseGL() {
         GlUtil.checkGlError("releaseGl Start!")
 
+        cameraTexture?.let {
+            it.release()
+            cameraTexture = null
+        }
+
         windowSurface?.let {
             it.release()
             windowSurface = null
@@ -303,12 +308,18 @@ internal class CapturePreviewObserver(private val surfaceView: SurfaceView,
 
         checkNotNull(camera, { Log.e(TAG, "Camera is Null@finishSurfaceSetup") }).let {
             // Checked Exception Ignored
-            it.setPreviewTexture(cameraTexture)
-            it.startPreview()
+
+            //setPreviewCallbackWithBuffer needs to be called before startPreview(),
+            // because setPreviewCallbackWithBuffer needs to specify a byte array as a buffer for previewing frame data,
+            // so we need to call addCallbackBuffer before setPreviewCallbackWithBuffer, so that the data of onPreviewFrame has value.
             it.addCallbackBuffer(callbackBuffer)
             it.setPreviewCallbackWithBuffer(this)
+            it.setPreviewTexture(cameraTexture)
+            it.startPreview()
 
-            cameraIntrinsics = CameraUtils.getCameraIntrinsics(it.parameters, cameraPreviewDimens.width, cameraPreviewDimens.height)
+            cameraIntrinsics = CameraUtils.getCameraIntrinsics(it.parameters,
+                                                               cameraPreviewDimens.width,
+                                                               cameraPreviewDimens.height)
         }
     }
 

@@ -38,7 +38,7 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             googleMap.clear()
 
             val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json)
-            googleMap?.setMapStyle(mapStyleOptions)
+            googleMap.setMapStyle(mapStyleOptions)
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google map", "fillMap() invoked with uninitialized googleMap")
             return

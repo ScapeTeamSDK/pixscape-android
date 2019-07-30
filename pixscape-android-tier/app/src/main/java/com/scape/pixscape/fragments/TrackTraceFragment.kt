@@ -75,15 +75,17 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
 
     private fun placeMarkerOnMap(location: LatLng, color: Int) {
         val markerOptions = MarkerOptions().position(location)
-        markerOptions.icon(vectorToBitmap(R.drawable.gps_user_location, color))
+        markerOptions.icon(vectorToBitmap(R.drawable.gps_user_location, resources.getColor(color)))
         fullMap.addMarker(markerOptions)
     }
 
     @SuppressLint("MissingPermission")
-    private fun setUpMap() {
+    private fun setUpFullMap() {
         if (context == null) return
 
         fullMap.isMyLocationEnabled = false
+        fullMap.uiSettings.isZoomControlsEnabled = false
+        fullMap.setOnMarkerClickListener(this)
 
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
         fullMap.setMapStyle(mapStyleOptions)
@@ -140,21 +142,6 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
 
     // endregion
 
-    // region Google Maps
-
-    override fun onMarkerClick(marker: Marker?) = false
-
-    override fun onMapReady(googleMap: GoogleMap) {
-        fullMap = googleMap
-
-        fullMap.uiSettings.isZoomControlsEnabled = false
-        fullMap.setOnMarkerClickListener(this)
-
-        setUpMap()
-    }
-
-    // endregion Google Maps
-
     // region Fragment
 
     override fun onResume() {
@@ -197,7 +184,7 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
 
         try {
             full_map_view.onCreate(savedInstanceState)
-            full_map_view.onResume()
+
             full_map_view.getMapAsync(this)
         } catch (ex: Resources.NotFoundException) {
             Log.e("Google Map", "Resources\$NotFoundException")
@@ -216,4 +203,16 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     }
 
     // endregion Fragment
+
+    // region Google Maps
+
+    override fun onMarkerClick(marker: Marker?) = false
+
+    override fun onMapReady(googleMap: GoogleMap) {
+        fullMap = googleMap
+
+        setUpFullMap()
+    }
+
+    // endregion Google Maps
 }

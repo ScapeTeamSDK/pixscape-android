@@ -89,7 +89,6 @@ internal class TraceHistoryAdapter(private val activity: FragmentActivity) : Rec
                     addAction(AlertAction(activity.getString(R.string.negative_delete), AlertActionStyle.NEGATIVE) { })
                     showImmersive(activity.window, activity as MainActivity)
                 }
-
                 activity.window.decorView.postDelayed({setSystemBarTheme(activity.window, false)}, 1000)
 
                 return@setOnLongClickListener true

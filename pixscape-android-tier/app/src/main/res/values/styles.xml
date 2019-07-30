@@ -11,7 +11,7 @@
     <style name="PixscapeTheme" parent="AppTheme">
         <item name="android:windowTranslucentNavigation">false</item>
         <item name="android:windowTranslucentStatus">false</item>
-        <item name="android:fontFamily">@font/nunitosans_regular</item>
+        <item name="android:fontFamily">@font/lato_regular</item>
         <item name="android:windowBackground">@drawable/launch_screen</item>
     </style>
 

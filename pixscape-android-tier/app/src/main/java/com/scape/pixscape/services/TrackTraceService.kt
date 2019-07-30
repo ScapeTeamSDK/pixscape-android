@@ -113,7 +113,9 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         override fun run() {
             val intent = Intent()
             intent.action = BROADCAST_ACTION_TIME
-            intent.putExtra(MILLIS_DATA_KEY, currentTimeInMillis)
+            if(isContinuousModeEnabled) {
+                intent.putExtra(MILLIS_DATA_KEY, currentTimeInMillis)
+            }
             sendBroadcast(intent)
         }
     }

@@ -14,7 +14,7 @@
         android:id="@+id/tvAction"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:fontFamily="@font/nunitosans_regular"
+        android:fontFamily="@font/lato_regular"
         android:gravity="center"
         android:padding="16dp"
         android:paddingEnd="16dp"

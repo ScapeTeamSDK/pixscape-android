@@ -120,13 +120,13 @@ object CameraUtils {
     }
 
     fun getCameraIntrinsics(params: Camera.Parameters, width: Int, height: Int): CameraIntrinsics {
-        val focalLengthX = (width * 0.5) / tan(params.horizontalViewAngle * 0.5 * PI /180);
-        val focalLengthY = (width * 0.5) / tan(params.verticalViewAngle * 0.5 * PI /180);
+        // only one focalLength because we cannot rely on manufacturers setting the camera intrinsics properly
+        val focalLength = (width * 0.5) / tan(params.horizontalViewAngle * 0.5 * PI /180)
 
         val principalPointX = width / 2.0
         val principalPointY = height / 2.0
 
-        return CameraIntrinsics(focalLengthX, focalLengthY, principalPointX, principalPointY)
+        return CameraIntrinsics(focalLength, focalLength, principalPointX, principalPointY)
     }
 }
 
