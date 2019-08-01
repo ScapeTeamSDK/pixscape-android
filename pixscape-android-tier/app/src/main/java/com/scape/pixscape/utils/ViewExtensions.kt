@@ -6,6 +6,7 @@ import android.view.Window
 import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import com.google.android.material.snackbar.Snackbar
 import com.irozon.alertview.AlertView
 import com.scape.pixscape.activities.MainActivity
 
@@ -40,5 +41,9 @@ fun setSystemBarTheme(window: Window, isDark: Boolean) {
 
 fun Activity.setSystemBarTheme(isDark: Boolean) {
     setSystemBarTheme(window, isDark)
+}
+
+fun View.showSnackbar(snackbarText: String, timeLength: Int) {
+    Snackbar.make(this, snackbarText, timeLength).show()
 }
 

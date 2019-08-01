@@ -48,6 +48,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         private var timer = Timer()
         var paused = false
         const val NOTIFICATION_ID = 5
+        const val SCAPE_ERROR_STATE_KEY = "com.scape.pixscape.trackactivityservice.scapeerrorstatekey"
         const val MILLIS_DATA_KEY = "com.scape.pixscape.trackactivityservice.millisdatakey"
         const val ROUTE_GPS_SECTIONS_DATA_KEY = "com.scape.pixscape.trackactivityservice.routegpssectionsdatakey"
         const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.trackactivityservice.routegpssectionsdatakey"
@@ -315,10 +316,6 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         intent.putExtras(bundle)
 
         sendBroadcast(intent)
-
-        // only stop service when single mode and we received a scape measurements
-        // otherwise onScapeSessionError will be called so we can stop the service there
-        stopService()
     }
 
     private fun onScapeLocationUpdatedContinuousMode(measurements: ScapeMeasurements?) {
@@ -374,13 +371,9 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
     override fun onScapeSessionError(session: ScapeSession?, state: ScapeSessionState, error: String) {
         if(!isContinuousModeEnabled) {
-            // single mode has been enabled and we have not received any  valid scape measurements
-            // in most cases it means we had GPS measurements but no scape ones
-            // so stop the service here
-            stopService()
-
             val intent = Intent()
             intent.action = BROADCAST_ACTION_STOP_TIMER
+            intent.putExtra(SCAPE_ERROR_STATE_KEY, state.ordinal)
 
             sendBroadcast(intent)
         }

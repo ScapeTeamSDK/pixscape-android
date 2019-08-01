@@ -5,7 +5,9 @@
     <color name="color_accent">#00ffae</color>
 
     <color name="scape_color">#00ffae</color>
+    <color name="scape_color_dark">#08885E</color>
     <color name="scape_blue">#223352</color>
+    <color name="scape_black">#3c3c3d</color>
 
     <color name="color_white">#FFFFFF</color>
     <color name="color_grey">#616161</color>
@@ -18,4 +20,13 @@
 
     <color name="text_color_black">#111</color>
     <color name="text_color_black_light">#222</color>
+
+    <array name="dotColors">
+        <item>@color/scape_color</item>
+        <item>@color/scape_color_dark</item>
+        <item>@color/scape_blue</item>
+        <item>@color/scape_color</item>
+        <item>@color/scape_black</item>
+        <item>@color/scape_color_dark</item>
+    </array>
 </resources>

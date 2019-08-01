@@ -21,10 +21,9 @@ import androidx.viewpager.widget.ViewPager
 import com.google.android.gms.location.LocationServices
 import com.google.android.libraries.maps.*
 import com.google.android.libraries.maps.model.*
+import com.google.android.material.snackbar.Snackbar
 import com.otaliastudios.cameraview.CameraView
-import com.otaliastudios.cameraview.frame.Frame
 import com.otaliastudios.cameraview.frame.FrameProcessor
-import com.scape.pixscape.utils.CameraIntrinsics
 import com.scape.pixscape.PixscapeApplication
 import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
@@ -32,6 +31,12 @@ import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.ViewPagerAdapter
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
+import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_GPS_SECTIONS_DATA_KEY
+import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
+import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
+import com.scape.pixscape.utils.CameraIntrinsics
+import com.scape.pixscape.utils.showSnackbar
+import com.scape.scapekit.ScapeSessionState
 import com.scape.scapekit.setByteBuffer
 import kotlinx.android.synthetic.main.camera_ui_container.*
 import kotlinx.android.synthetic.main.fragment_camera.*
@@ -63,8 +68,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         const val BROADCAST_ACTION_SCAPE_LOCATION = "com.scape.pixscape.camerafragment.broadcastreceiverscapelocation"
         const val BROADCAST_ACTION_STOP_TIMER = "com.scape.pixscape.camerafragment.broadcastreceiverstoptimer"
         const val TIME_DATA_KEY = "com.scape.pixscape.camerafragment.timedatakey"
-        const val ROUTE_GPS_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routegpssectionsdatakey"
-        const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routescapesectionsdatakey"
         const val MODE_DATA_KEY = "com.scape.pixscape.camerafragment.modedatakey"
 
         private var timerState = TimerState.Idle
@@ -72,38 +75,37 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         private var distanceInMeters = 0.0
         private var gpsRouteSections: List<RouteSection> = ArrayList()
         private var scapeRouteSections: List<RouteSection> = ArrayList()
+        private var scapeSessionState: ScapeSessionState = ScapeSessionState.NO_ERROR
+        private var scapeSessionStateValues = ScapeSessionState.values()
     }
 
-    private val frameProcessor = object : FrameProcessor {
-        override fun process(frame: Frame) {
-            val width = frame.size.width
-            val height = frame.size.height
-            val size = width * height
+    private val frameProcessor = FrameProcessor { frame ->
+        val width = frame.size.width
+        val height = frame.size.height
+        val size = width * height
 
-            if(cameraIntrinsics == null) {
-                cameraIntrinsics = viewFinder.cameraIntrinsics
-            }
+        if(cameraIntrinsics == null) {
+            cameraIntrinsics = viewFinder.cameraIntrinsics
+        }
 
-            if (luma == null) {
-                luma = ByteBuffer.allocateDirect(size)
-            }
+        if (luma == null) {
+            luma = ByteBuffer.allocateDirect(size)
+        }
 
-            for (pixelPointer in 0 until size) {
-                luma?.put(pixelPointer, frame.data[pixelPointer] and 0xFF.toByte())
-            }
+        for (pixelPointer in 0 until size) {
+            luma?.put(pixelPointer, frame.data[pixelPointer] and 0xFF.toByte())
+        }
 
-            val intrinsics = cameraIntrinsics
-            if (intrinsics != null) {
+        val intrinsics = cameraIntrinsics
+        if (intrinsics != null) {
+            //Log.e("setByteBuffer", "$intrinsics $width $height")
 
-                //Log.e("setByteBuffer", "$intrinsics $width $height")
-
-                val scapeClient = PixscapeApplication.sharedInstance?.scapeClient
-                scapeClient?.scapeSession?.setCameraIntrinsics(intrinsics.focalLengthX,
-                                                               intrinsics.focalLengthY,
-                                                               intrinsics.principalPointX,
-                                                               intrinsics.principalPointY)
-                scapeClient?.scapeSession?.setByteBuffer(luma, width, height)
-            }
+            val scapeClient = PixscapeApplication.sharedInstance?.scapeClient
+            scapeClient?.scapeSession?.setCameraIntrinsics(intrinsics.focalLengthX,
+                                                           intrinsics.focalLengthY,
+                                                           intrinsics.principalPointX,
+                                                           intrinsics.principalPointY)
+            scapeClient?.scapeSession?.setByteBuffer(luma, width, height)
         }
     }
 
@@ -119,7 +121,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 }
                 BROADCAST_ACTION_GPS_LOCATION -> {
                     if (activity == null) return
-                    gpsRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_GPS_SECTIONS_DATA_KEY)
+                    gpsRouteSections = intent.getParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY)
 
                     distanceInMeters = gpsRouteSections.sumByDouble { section -> section.distance.toDouble() }
 
@@ -129,15 +131,28 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 }
                 BROADCAST_ACTION_SCAPE_LOCATION -> {
                     if (activity == null) return
-                    scapeRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_SCAPE_SECTIONS_DATA_KEY)
+                    scapeRouteSections = intent.getParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY)
 
                     fillMap()
+
+                    // if we have any scape error then the service will
+                    // trigger BROADCAST_ACTION_STOP_TIMER which stops the service,
+                    // but if we have a succesful scape result then we need to stop the service here when in single mode
+                    if(!isContinuousModeEnabled) {
+                        stopTimerAndForegroundService()
+                    }
 
                     // don't compute metrics for scape routes
 
                     if (sharedPref == null) return
                 }
                 BROADCAST_ACTION_STOP_TIMER   -> {
+                    if(activity == null) return
+                    scapeSessionState = scapeSessionStateValues[intent.getIntExtra(SCAPE_ERROR_STATE_KEY,
+                                                                                   ScapeSessionState.NO_ERROR.ordinal)]
+
+                    showErrorMessage()
+
                     stopTimerAndForegroundService()
 
                     if(isContinuousModeEnabled) {
@@ -149,6 +164,68 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     // region Private
+
+    private fun showErrorMessage() {
+        when(scapeSessionState) {
+            ScapeSessionState.AUTHENTICATION_ERROR, ScapeSessionState.NETWORK_ERROR -> {
+                container?.showSnackbar("Something went wrong with your internet connection, try again", 3000)
+            }
+            ScapeSessionState.LOCKING_POSITION_ERROR -> {
+                container?.showSnackbar("Could not lock your position, try again", 3000)
+            }
+        }
+    }
+
+    private fun bindings() {
+        view_camera_center.setOnClickListener {
+            if (view_pager.currentItem != 1) {
+                view_pager.currentItem = 1
+            } else if(!view_switch_bottom.isChecked) { // we are not in the continous mode
+                startForegroundTrackService(false)
+            }
+        }
+
+        play_timer_button.setOnClickListener {
+            if(timerState == TimerState.Idle) {
+                timerState = TimerState.Running
+
+                play_timer_button.hide()
+
+                pause_timer_button.show()
+
+                view_switch_bottom?.visibility = View.GONE
+
+                startForegroundTrackService(true)
+
+            } else if(timerState == TimerState.Paused) {
+                timerState = TimerState.Running
+
+                TrackTraceService.paused = false
+
+                play_timer_button.hide()
+                stop_timer_button.hide()
+
+                pause_timer_button.show()
+            }
+        }
+
+        pause_timer_button.setOnClickListener {
+            TrackTraceService.paused = true
+
+            pause_timer_button.hide()
+
+            play_timer_button.show()
+            stop_timer_button.show()
+
+            timerState = TimerState.Paused
+        }
+
+        stop_timer_button.setOnClickListener {
+            stopTimerAndForegroundService()
+
+            startTrackTraceActivity()
+        }
+    }
 
     /** Method used to re-draw the camera UI controls, called every time configuration changes */
     @SuppressLint("RestrictedApi")
@@ -238,6 +315,13 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     private fun startForegroundTrackService(isContinuousModeEnabled: Boolean) {
+        dots_view?.visibility = View.VISIBLE
+        container?.showSnackbar("Localizing, please wait..", 1000)
+
+        if(!isContinuousModeEnabled) {
+            view_switch_bottom?.visibility = View.GONE
+        }
+
         CameraFragment.isContinuousModeEnabled = isContinuousModeEnabled
 
         val intentFilter = IntentFilter()
@@ -263,17 +347,16 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private fun stopTimerAndForegroundService() {
         timerState = TimerState.Idle
 
-        miniMap?.clear()
-
         time?.base = SystemClock.elapsedRealtime()
 
         pause_timer_button?.hide()
         stop_timer_button?.hide()
 
+        dots_view?.visibility = View.GONE
+        view_switch_bottom?.visibility = View.VISIBLE
+
         if(isContinuousModeEnabled) {
             play_timer_button?.show()
-
-            view_switch_bottom?.visibility = View.VISIBLE
         }
 
         stopForegroundTrackService()
@@ -323,57 +406,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 play_timer_button.show()
                 stop_timer_button.show()
             }
-        }
-    }
-
-    private fun bindings() {
-        view_camera_center.setOnClickListener {
-            if (view_pager.currentItem != 1) {
-                view_pager.currentItem = 1
-            } else if(!view_switch_bottom.isChecked) {
-                startForegroundTrackService(false)
-            }
-        }
-
-        play_timer_button.setOnClickListener {
-            if(timerState == TimerState.Idle) {
-                timerState = TimerState.Running
-
-                play_timer_button.hide()
-
-                pause_timer_button.show()
-
-                view_switch_bottom.visibility = View.GONE
-
-                startForegroundTrackService(true)
-
-            } else if(timerState == TimerState.Paused) {
-                timerState = TimerState.Running
-
-                TrackTraceService.paused = false
-
-                play_timer_button.hide()
-                stop_timer_button.hide()
-
-                pause_timer_button.show()
-            }
-        }
-
-        pause_timer_button.setOnClickListener {
-            TrackTraceService.paused = true
-
-            pause_timer_button.hide()
-
-            play_timer_button.show()
-            stop_timer_button.show()
-
-            timerState = TimerState.Paused
-        }
-
-        stop_timer_button.setOnClickListener {
-            stopTimerAndForegroundService()
-
-            startTrackTraceActivity()
         }
     }
 

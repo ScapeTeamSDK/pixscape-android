@@ -52,18 +52,6 @@
         android:layout_gravity="center|bottom"
         android:visibility="gone"/>
 
-    <!--<com.google.android.material.floatingactionbutton.FloatingActionButton-->
-        <!--android:id="@+id/play_timer_button_running"-->
-        <!--android:layout_width="66dp"-->
-        <!--android:layout_height="66dp"-->
-        <!--app:fabCustomSize="@dimen/fab_size"-->
-        <!--app:backgroundTint="@color/fab_color_go"-->
-        <!--android:layout_marginBottom="77dp"-->
-        <!--android:src="@drawable/ic_play_arrow"-->
-        <!--android:scaleType="center"-->
-        <!--android:layout_gravity="center|bottom"-->
-        <!--android:visibility="gone"/>-->
-
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/stop_timer_button"
         android:layout_width="55dp"
@@ -105,6 +93,19 @@
         android:layout_height="wrap_content"
         android:switchPadding="10dp"
         android:textColor="@color/color_white"/>
+
+    <com.scape.pixscape.view.DotsProgressIndicator
+        android:id="@+id/dots_view"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center|bottom"
+        android:layout_marginBottom="20dp"
+        app:dotsDiameter="12dp"
+        app:dotsMode="setSize"
+        app:dotsSpacing="2dp"
+        app:numberOfDots="6"
+        app:dotColors="@array/dotColors"
+        android:visibility="gone"/>
 
     <ImageView
         android:id="@+id/view_circle_invisible_bottom"

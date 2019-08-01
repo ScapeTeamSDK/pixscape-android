@@ -1,7 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <declare-styleable name="CameraView">
 
+    <declare-styleable name="DotsProgressIndicator">
+        <attr name="dotsMode" format="enum">
+            <enum name="bestFit" value="0" />
+            <enum name="setSize" value="1" />
+        </attr>
+        <attr name="dotsSpacing" format="dimension" />
+        <attr name="dotsDiameter" format="dimension" />
+        <attr name="dotColors" format="reference" />
+        <attr name="numberOfDots" format="integer" />
+        <attr name="visibilityChangeDelay" format="integer" />
+    </declare-styleable>
+
+    <declare-styleable name="CameraView">
         <attr name="cameraPictureSizeMinWidth" format="integer|reference"/>
         <attr name="cameraPictureSizeMaxWidth" format="integer|reference"/>
         <attr name="cameraPictureSizeMinHeight" format="integer|reference"/>
@@ -133,13 +145,12 @@
         <attr name="cameraUseDeviceOrientation" format="boolean"/>
 
         <attr name="cameraExperimental" format="boolean" />
-
     </declare-styleable>
 
     <declare-styleable name="CameraView_Layout">
         <attr name="layout_drawOnPreview" format="boolean"/>
         <attr name="layout_drawOnPictureSnapshot" format="boolean"/>
         <attr name="layout_drawOnVideoSnapshot" format="boolean"/>
-
     </declare-styleable>
+
 </resources>
