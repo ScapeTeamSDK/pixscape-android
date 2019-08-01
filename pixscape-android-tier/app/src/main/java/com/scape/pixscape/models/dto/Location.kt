@@ -1,7 +1,7 @@
 package com.scape.pixscape.models.dto
 
 import android.os.Parcelable
-import com.google.android.gms.maps.model.LatLng
+import com.google.android.libraries.maps.model.LatLng
 import kotlinx.android.parcel.Parcelize
 
 @Parcelize

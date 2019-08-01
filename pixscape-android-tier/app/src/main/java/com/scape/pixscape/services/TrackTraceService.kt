@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Build
+import android.os.Bundle
 import android.os.IBinder
 import android.os.Parcelable
 import android.util.Log
@@ -59,7 +60,11 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
         startUpdatingLocation(isContinuousModeEnabled)
 
-        Toast.makeText(this, "Tracking started: $isContinuousModeEnabled", Toast.LENGTH_LONG).show()
+        if(BuildConfig.DEBUG) {
+            Toast.makeText(this,
+                           "Tracking started: $isContinuousModeEnabled",
+                           Toast.LENGTH_LONG).show()
+        }
 
         val defaultNotification = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setContentTitle(getString(R.string.notification_title))
@@ -213,9 +218,11 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
         scapeClient?.scapeSession?.stopFetch()
 
-        Toast.makeText(this,
-                       "Tracking stopped. GPS Locations: ${gpsLocations.size} Scape Locations: ${scapeLocations.size}",
-                       Toast.LENGTH_LONG).show()
+        if(BuildConfig.DEBUG) {
+            Toast.makeText(this,
+                           "Tracking stopped. GPS Locations: ${gpsLocations.size} Scape Locations: ${scapeLocations.size}",
+                           Toast.LENGTH_LONG).show()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -243,9 +250,13 @@ class TrackTraceService : Service(), ScapeSessionObserver {
                                                                                  newLatLng.longitude)))
         }
 
+        val bundle = Bundle().apply {
+            putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
+        }
+
         val intent = Intent()
         intent.action = BROADCAST_ACTION_GPS_LOCATION
-        intent.putParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
+        intent.putExtras(bundle)
 
         sendBroadcast(intent)
     }
@@ -272,9 +283,13 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         }
         lastGpsLocation = measurements.latLng
 
+        val bundle = Bundle().apply {
+            putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
+        }
+
         val intent = Intent()
         intent.action = BROADCAST_ACTION_GPS_LOCATION
-        intent.putParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
+        intent.putExtras(bundle)
 
         sendBroadcast(intent)
     }
@@ -292,9 +307,12 @@ class TrackTraceService : Service(), ScapeSessionObserver {
                                                                                    newLatLng.longitude)))
         }
 
+        val bundle = Bundle().apply {
+            putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
+        }
         val intent = Intent()
         intent.action = BROADCAST_ACTION_SCAPE_LOCATION
-        intent.putParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
+        intent.putExtras(bundle)
 
         sendBroadcast(intent)
 
@@ -324,9 +342,12 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         }
         lastScapeLocation = measurements.latLng
 
+        val bundle = Bundle().apply {
+            putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
+        }
         val intent = Intent()
         intent.action = BROADCAST_ACTION_SCAPE_LOCATION
-        intent.putParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
+        intent.putExtras(bundle)
 
         sendBroadcast(intent)
     }
@@ -356,7 +377,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
             // single mode has been enabled and we have not received any  valid scape measurements
             // in most cases it means we had GPS measurements but no scape ones
             // so stop the service here
-            //stopService()
+            stopService()
 
             val intent = Intent()
             intent.action = BROADCAST_ACTION_STOP_TIMER

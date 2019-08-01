@@ -19,10 +19,10 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.model.*
+import com.google.android.libraries.maps.CameraUpdateFactory
+import com.google.android.libraries.maps.GoogleMap
+import com.google.android.libraries.maps.OnMapReadyCallback
+import com.google.android.libraries.maps.model.*
 import com.scape.pixscape.R
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService

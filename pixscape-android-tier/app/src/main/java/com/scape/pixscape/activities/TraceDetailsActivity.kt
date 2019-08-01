@@ -3,28 +3,30 @@ package com.scape.pixscape.activities
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Bundle
-import androidx.core.content.ContextCompat
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import com.google.android.libraries.maps.CameraUpdateFactory
+import com.google.android.libraries.maps.GoogleMap
+import com.google.android.libraries.maps.OnMapReadyCallback
+import com.google.android.libraries.maps.SupportMapFragment
+import com.google.android.libraries.maps.model.MapStyleOptions
+import com.google.android.libraries.maps.model.PolylineOptions
 import com.scape.pixscape.R
+import com.scape.pixscape.fragments.CameraFragment
+import com.scape.pixscape.models.dto.GpsTrace
+import com.scape.pixscape.models.dto.RouteSection
+import com.scape.pixscape.models.dto.ScapeTrace
 import com.scape.pixscape.viewmodels.TraceViewModel
 import com.scape.pixscape.viewmodels.TraceViewModelFactory
-import com.scape.pixscape.models.dto.RouteSection
-import com.scape.pixscape.models.dto.GpsTrace
-import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.GoogleMap
-import com.google.android.gms.maps.OnMapReadyCallback
-import com.google.android.gms.maps.model.MapStyleOptions
-import com.google.android.gms.maps.model.PolylineOptions
-import com.scape.pixscape.fragments.CameraFragment
-import com.scape.pixscape.models.dto.ScapeTrace
 import kotlinx.android.synthetic.main.activity_trace_details.*
 import java.util.*
 import java.util.concurrent.TimeUnit
 
-internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
+internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
+                                      GoogleMap.OnMapLoadedCallback {
 
-    private lateinit var googleMap: GoogleMap
+    private var googleMap: GoogleMap? = null
     private var sharedPref: SharedPreferences? = null
 
     private lateinit var currentDate: Date
@@ -33,33 +35,39 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
     private var scapeRouteSections: List<RouteSection> = arrayListOf()
     private var launchedFromHistory = true
 
+    private fun initMap() {
+        val mapFragment = supportFragmentManager.findFragmentById(R.id.summary_map) as SupportMapFragment
+
+        mapFragment.getMapAsync(this)
+    }
+
     private fun fillMap() {
         try {
-            googleMap.clear()
+            googleMap?.clear()
 
             val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json)
-            googleMap.setMapStyle(mapStyleOptions)
+            googleMap?.setMapStyle(mapStyleOptions)
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google map", "fillMap() invoked with uninitialized googleMap")
             return
         }
 
         for (i in 0 until gpsRouteSections.size) {
-            googleMap.addPolyline(PolylineOptions().add(gpsRouteSections[i].beginning.toLatLng(),
+            googleMap?.addPolyline(PolylineOptions().add(gpsRouteSections[i].beginning.toLatLng(),
                                                         gpsRouteSections[i].end.toLatLng())
                                           .color(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
                                           .width(10f))
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            googleMap.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
+            googleMap?.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
                                                         scapeRouteSections[i].end.toLatLng())
                                           .color(ContextCompat.getColor(baseContext!!, R.color.scape_color))
                                           .width(10f))
         }
 
         if (gpsRouteSections.isNotEmpty()) {
-            googleMap.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(), 18f))
+            googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(), 18f))
         }
     }
 
@@ -107,9 +115,7 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
             Math.floor((pace - Math.floor(pace)) * 60).toInt()
         )
 
-        summary_map.onCreate(savedInstanceState)
-        summary_map.onResume()
-        summary_map.getMapAsync(this)
+        initMap()
     }
 
     override fun onDestroy() {
@@ -131,8 +137,14 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback {
 
     // region Google Maps
 
-    override fun onMapReady(_googleMap: GoogleMap) {
-        googleMap = _googleMap
+    override fun onMapLoaded() {
+    }
+
+    override fun onMapReady(map: GoogleMap) {
+        googleMap = map
+
+        googleMap?.setOnMapLoadedCallback(this)
+
         fillMap()
     }
 

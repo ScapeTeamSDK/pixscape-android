@@ -6,7 +6,6 @@ import kotlinx.android.parcel.Parcelize
 
 @Parcelize
 data class RouteSection(val beginning: Location, val end: Location) : Parcelable {
-    @IgnoredOnParcel
     var distance = 0F
         get(){
             val result = FloatArray(1)

@@ -25,6 +25,7 @@ package com.scape.capture.utils
 import android.hardware.Camera
 import android.util.Log
 import com.scape.capture.graphics.Dimens
+import com.scape.pixscape.utils.CameraIntrinsics
 import kotlin.math.PI
 import kotlin.math.tan
 
@@ -126,8 +127,10 @@ object CameraUtils {
         val principalPointX = width / 2.0
         val principalPointY = height / 2.0
 
-        return CameraIntrinsics(focalLength, focalLength, principalPointX, principalPointY)
+        return CameraIntrinsics(focalLength,
+                                                         focalLength,
+                                                         principalPointX,
+                                                         principalPointY)
     }
 }
 
-data class CameraIntrinsics(var focalLengthX: Double, var focalLengthY: Double, var principalPointX: Double, var principalPointY: Double)

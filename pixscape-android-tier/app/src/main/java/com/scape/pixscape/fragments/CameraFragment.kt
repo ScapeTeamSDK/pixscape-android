@@ -10,7 +10,6 @@ import android.os.Parcelable
 import android.os.SystemClock
 import android.util.Log
 import android.view.LayoutInflater
-import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.RelativeLayout
@@ -20,9 +19,12 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.viewpager.widget.ViewPager
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.*
-import com.google.android.gms.maps.model.*
-import com.scape.capture.preview.CapturePreviewObserver
+import com.google.android.libraries.maps.*
+import com.google.android.libraries.maps.model.*
+import com.otaliastudios.cameraview.CameraView
+import com.otaliastudios.cameraview.frame.Frame
+import com.otaliastudios.cameraview.frame.FrameProcessor
+import com.scape.pixscape.utils.CameraIntrinsics
 import com.scape.pixscape.PixscapeApplication
 import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
@@ -30,21 +32,25 @@ import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.ViewPagerAdapter
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
+import com.scape.scapekit.setByteBuffer
 import kotlinx.android.synthetic.main.camera_ui_container.*
 import kotlinx.android.synthetic.main.fragment_camera.*
 import kotlinx.android.synthetic.main.view_pager_tabs.*
+import java.nio.ByteBuffer
+import kotlin.experimental.and
 
 enum class TimerState { Idle, Running, Paused }
 
 internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
+    private var luma: ByteBuffer? = null
+    private var cameraIntrinsics: CameraIntrinsics? = null
+
     private lateinit var container: RelativeLayout
-    private lateinit var viewFinder: SurfaceView
+    private lateinit var viewFinder: CameraView
 
     private var miniMapView: MapView? = null
     private var miniMap: GoogleMap? = null
-
-    private var mPreview: CapturePreviewObserver? = null
 
     private var sharedPref: SharedPreferences? = null
 
@@ -66,6 +72,39 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         private var distanceInMeters = 0.0
         private var gpsRouteSections: List<RouteSection> = ArrayList()
         private var scapeRouteSections: List<RouteSection> = ArrayList()
+    }
+
+    private val frameProcessor = object : FrameProcessor {
+        override fun process(frame: Frame) {
+            val width = frame.size.width
+            val height = frame.size.height
+            val size = width * height
+
+            if(cameraIntrinsics == null) {
+                cameraIntrinsics = viewFinder.cameraIntrinsics
+            }
+
+            if (luma == null) {
+                luma = ByteBuffer.allocateDirect(size)
+            }
+
+            for (pixelPointer in 0 until size) {
+                luma?.put(pixelPointer, frame.data[pixelPointer] and 0xFF.toByte())
+            }
+
+            val intrinsics = cameraIntrinsics
+            if (intrinsics != null) {
+
+                //Log.e("setByteBuffer", "$intrinsics $width $height")
+
+                val scapeClient = PixscapeApplication.sharedInstance?.scapeClient
+                scapeClient?.scapeSession?.setCameraIntrinsics(intrinsics.focalLengthX,
+                                                               intrinsics.focalLengthY,
+                                                               intrinsics.principalPointX,
+                                                               intrinsics.principalPointY)
+                scapeClient?.scapeSession?.setByteBuffer(luma, width, height)
+            }
+        }
     }
 
     private val trackTraceBroadcastReceiver = object : BroadcastReceiver() {
@@ -218,43 +257,51 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private fun stopForegroundTrackService() {
         activity?.stopService(Intent(context, TrackTraceService::class.java))
 
-        activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
+        activity?.unregisterReceiver(trackTraceBroadcastReceiver)
     }
 
     private fun stopTimerAndForegroundService() {
         timerState = TimerState.Idle
 
-        stopForegroundTrackService()
-
         miniMap?.clear()
 
-        time.base = SystemClock.elapsedRealtime()
+        time?.base = SystemClock.elapsedRealtime()
 
-        pause_timer_button.hide()
-        stop_timer_button.hide()
+        pause_timer_button?.hide()
+        stop_timer_button?.hide()
 
         if(isContinuousModeEnabled) {
-            play_timer_button.show()
+            play_timer_button?.show()
 
-            view_switch_bottom.visibility = View.VISIBLE
+            view_switch_bottom?.visibility = View.VISIBLE
         }
+
+        stopForegroundTrackService()
     }
 
     private fun startTrackTraceActivity() {
-        @Suppress("UNCHECKED_CAST") val localGpsRouteSections = gpsRouteSections as ArrayList<Parcelable>
-        @Suppress("UNCHECKED_CAST") val localScapeRouteSections = scapeRouteSections as ArrayList<Parcelable>
+        try {
+            @Suppress("UNCHECKED_CAST") val localGpsRouteSections = gpsRouteSections as ArrayList<Parcelable>
+            @Suppress("UNCHECKED_CAST") val localScapeRouteSections = scapeRouteSections as ArrayList<Parcelable>
 
-        gpsRouteSections = ArrayList()
-        scapeRouteSections = ArrayList()
+            gpsRouteSections = ArrayList()
+            scapeRouteSections = ArrayList()
 
-        if (localGpsRouteSections.size < 1) return
+            if (localGpsRouteSections.isEmpty()) return
 
-        val intent = Intent(activity!!, TraceDetailsActivity::class.java)
-                .putExtra(TIME_DATA_KEY, measuredTimeInMillis)
-                .putParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY, localGpsRouteSections)
-                .putParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY, localScapeRouteSections)
-                .putExtra(MODE_DATA_KEY, false)
-        startActivity(intent)
+            val bundle = Bundle().apply {
+                putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, localGpsRouteSections)
+                putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, localScapeRouteSections)
+            }
+
+            val intent = Intent(activity!!, TraceDetailsActivity::class.java)
+                    .putExtra(TIME_DATA_KEY, measuredTimeInMillis)
+                    .putExtras(bundle)
+                    .putExtra(MODE_DATA_KEY, false)
+            startActivity(intent)
+        } catch (t: Throwable) {
+            Log.e("CameraFragment", t.toString())
+        }
     }
 
     private fun restoreTimerState() {
@@ -323,12 +370,10 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             timerState = TimerState.Paused
         }
 
-        stop_timer_button.setOnLongClickListener {
+        stop_timer_button.setOnClickListener {
             stopTimerAndForegroundService()
 
             startTrackTraceActivity()
-
-            return@setOnLongClickListener true
         }
     }
 
@@ -487,7 +532,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         super.onViewCreated(view, savedInstanceState)
 
         container = view as RelativeLayout
-        viewFinder = container.findViewById(R.id.view_finder)
 
         miniMapView = container.findViewById(R.id.mini_map_view)
         miniMapView?.onCreate(savedInstanceState)
@@ -495,7 +539,10 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         miniMapView?.getMapAsync(this)
         MapsInitializer.initialize(activity as MainActivity)
 
-        mPreview = CapturePreviewObserver(viewFinder, 0).apply { lifecycle.addObserver(this) }
+        viewFinder = container.findViewById(R.id.view_finder)
+        viewFinder.setLifecycleOwner(this)
+
+        viewFinder.addFrameProcessor(frameProcessor)
 
         // Wait for the views to be properly laid out
         viewFinder.post {

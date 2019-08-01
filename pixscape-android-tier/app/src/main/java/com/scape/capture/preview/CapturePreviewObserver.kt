@@ -22,7 +22,7 @@ import com.scape.capture.gles.*
 import com.scape.capture.gles.shader.ShaderProgram
 import com.scape.capture.graphics.Dimens
 import com.scape.capture.graphics.XY
-import com.scape.capture.utils.CameraIntrinsics
+import com.scape.pixscape.utils.CameraIntrinsics
 import com.scape.capture.utils.CameraUtils
 import com.scape.pixscape.PixscapeApplication
 import com.scape.scapekit.setByteBuffer
