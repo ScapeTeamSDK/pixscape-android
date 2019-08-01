@@ -146,6 +146,7 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
         googleMap?.setOnMapLoadedCallback(this)
 
         googleMap?.isTrafficEnabled = false
+        googleMap?.isBuildingsEnabled = false
 
         fillMap()
     }

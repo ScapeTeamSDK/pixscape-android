@@ -349,6 +349,10 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private fun stopTimerAndForegroundService() {
         timerState = TimerState.Idle
 
+        if(isContinuousModeEnabled) {
+            miniMap?.clear() // to clear traces only
+        }
+
         time?.base = SystemClock.elapsedRealtime()
 
         pause_timer_button?.hide()

@@ -83,6 +83,7 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     private fun setUpFullMap() {
         if (context == null) return
 
+        fullMap.isBuildingsEnabled = false
         fullMap.isTrafficEnabled = false
         fullMap.isMyLocationEnabled = false
         fullMap.uiSettings.isZoomControlsEnabled = false

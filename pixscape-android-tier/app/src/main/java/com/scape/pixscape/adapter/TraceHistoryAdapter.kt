@@ -58,7 +58,7 @@ internal class TraceHistoryAdapter(private val activity: FragmentActivity) : Rec
 
         @SuppressLint("SetTextI18n")
         fun setData(gpsTrace: GpsTrace, scapeTrace: ScapeTrace) {
-            itemView.history_trace_date.text = SimpleDateFormat("dd MMMM yyyy HH:mm:ss", Locale.getDefault()).format(gpsTrace.date)
+            itemView.history_trace_date.text = SimpleDateFormat("dd MMMM yyyy - HH:mm:ss", Locale.getDefault()).format(gpsTrace.date)
             itemView.history_distance.text = "%.2f KM".format(gpsTrace.routeSections.sumByDouble { it.distance.toDouble() } / 1000)
             val formattedTime = String.format("%02d:%02d",
                                               TimeUnit.MILLISECONDS.toHours(gpsTrace.timeInMillis),
@@ -75,6 +75,7 @@ internal class TraceHistoryAdapter(private val activity: FragmentActivity) : Rec
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 activity.startActivity(intent)
             }
+            
             itemView.setOnLongClickListener {
                 val viewModel = TraceViewModelFactory(activity.applicationContext as Application).create(TraceViewModel::class.java)
 
