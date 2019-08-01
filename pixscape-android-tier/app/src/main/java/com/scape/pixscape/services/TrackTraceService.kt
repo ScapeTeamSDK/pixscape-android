@@ -95,20 +95,6 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         }
     }
 
-    private fun stopService() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            stopForeground(true)
-
-            try {
-                stopSelf()
-            } catch(e: Throwable) {
-                Log.e("", e.toString())
-            }
-        } else {
-            stopSelf()
-        }
-    }
-
     private inner class UpdateTimeTask : TimerTask() {
         override fun run() {
             if (!paused) currentTimeInMillis += 10

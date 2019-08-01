@@ -23,8 +23,6 @@ import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.fragments.CameraFragment
 import com.scape.pixscape.models.dto.GpsTrace
 import com.scape.pixscape.models.dto.ScapeTrace
-import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_GPS_SECTIONS_DATA_KEY
-import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
 import com.scape.pixscape.utils.setSystemBarTheme
 import com.scape.pixscape.utils.showImmersive
 import kotlinx.android.synthetic.main.trace_history_row.view.*
@@ -72,9 +70,9 @@ internal class TraceHistoryAdapter(private val activity: FragmentActivity) : Rec
             itemView.setOnClickListener {
                 @Suppress("UNCHECKED_CAST") val intent = Intent(activity, TraceDetailsActivity::class.java)
                         .putExtra(CameraFragment.TIME_DATA_KEY, gpsTrace.timeInMillis)
-                        .putParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY,
+                        .putParcelableArrayListExtra(CameraFragment.ROUTE_GPS_SECTIONS_DATA_KEY,
                                                      gpsTrace.routeSections as ArrayList<Parcelable>)
-                        .putParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY,
+                        .putParcelableArrayListExtra(CameraFragment.ROUTE_SCAPE_SECTIONS_DATA_KEY,
                                                      scapeTrace.routeSections as ArrayList<Parcelable>)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 activity.startActivity(intent)

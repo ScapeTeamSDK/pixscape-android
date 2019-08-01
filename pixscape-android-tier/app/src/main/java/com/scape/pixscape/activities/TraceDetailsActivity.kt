@@ -17,8 +17,6 @@ import com.scape.pixscape.fragments.CameraFragment
 import com.scape.pixscape.models.dto.GpsTrace
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.models.dto.ScapeTrace
-import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_GPS_SECTIONS_DATA_KEY
-import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
 import com.scape.pixscape.viewmodels.TraceViewModel
 import com.scape.pixscape.viewmodels.TraceViewModelFactory
 import kotlinx.android.synthetic.main.activity_trace_details.*
@@ -79,9 +77,9 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_trace_details)
 
-        gpsRouteSections = intent.getParcelableArrayListExtra<RouteSection>(ROUTE_GPS_SECTIONS_DATA_KEY) as List<RouteSection>
+        gpsRouteSections = intent.getParcelableArrayListExtra<RouteSection>(CameraFragment.ROUTE_GPS_SECTIONS_DATA_KEY) as List<RouteSection>
 
-        val scapeList = intent.getParcelableArrayListExtra<RouteSection>(ROUTE_SCAPE_SECTIONS_DATA_KEY)
+        val scapeList = intent.getParcelableArrayListExtra<RouteSection>(CameraFragment.ROUTE_SCAPE_SECTIONS_DATA_KEY)
         if(!scapeList.isNullOrEmpty()) {
             scapeRouteSections = scapeList as List<RouteSection>
         }
@@ -146,6 +144,8 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
         googleMap = map
 
         googleMap?.setOnMapLoadedCallback(this)
+
+        googleMap?.isTrafficEnabled = false
 
         fillMap()
     }

@@ -1,13 +1,19 @@
 package com.scape.pixscape.utils
 
 import android.app.Activity
+import android.app.PendingIntent.getActivity
+import android.graphics.Color
 import android.view.View
 import android.view.Window
 import android.view.WindowManager
+import android.widget.FrameLayout
+import android.widget.RelativeLayout
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import com.google.android.material.snackbar.Snackbar
 import com.irozon.alertview.AlertView
+import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
 
 /** Same as [AlertView.show] but setting immersive mode in the view's window */
@@ -43,7 +49,18 @@ fun Activity.setSystemBarTheme(isDark: Boolean) {
     setSystemBarTheme(window, isDark)
 }
 
-fun View.showSnackbar(snackbarText: String, timeLength: Int) {
-    Snackbar.make(this, snackbarText, timeLength).show()
+fun View.showSnackbar(snackbarText: String, color: Int, timeLength: Int) {
+    val snackBar = Snackbar.make(this, snackbarText, timeLength)
+    val snackbarView = snackBar.view
+    snackbarView.setBackgroundColor(ContextCompat.getColor(this.context, color))
+
+    val params = snackbarView.layoutParams as? FrameLayout.LayoutParams
+    params?.bottomMargin = -15
+
+    if(params != null) {
+        snackbarView.layoutParams = params
+    }
+
+    snackBar.show()
 }
 

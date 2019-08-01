@@ -99,7 +99,7 @@
         android:layout_width="120dp"
         android:layout_height="wrap_content"
         android:layout_gravity="center|bottom"
-        android:layout_marginBottom="20dp"
+        android:layout_marginBottom="30dp"
         app:dotsDiameter="12dp"
         app:dotsMode="setSize"
         app:dotsSpacing="2dp"
