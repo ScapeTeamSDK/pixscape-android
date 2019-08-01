@@ -12,7 +12,7 @@
     <dimen name="metrics_margin_bottom">12dp</dimen>
     <dimen name="fabs_spacing">10dp</dimen>
     <dimen name="history_icon_size">18dp</dimen>
-    <dimen name="history_date_text_size">24sp</dimen>
+    <dimen name="history_date_text_size">20sp</dimen>
     <dimen name="summary_icon_size">48dp</dimen>
     <dimen name="summary_icon_padding">4dp</dimen>
     <dimen name="summary_box_padding">12dp</dimen>

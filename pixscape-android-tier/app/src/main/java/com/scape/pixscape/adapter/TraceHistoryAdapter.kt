@@ -1,9 +1,7 @@
 package com.scape.pixscape.adapter
 
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.app.Application
-import android.content.Context
 import android.content.Intent
 import android.os.Parcelable
 import android.view.LayoutInflater
@@ -17,14 +15,14 @@ import com.irozon.alertview.AlertView
 import com.irozon.alertview.objects.AlertAction
 import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
-import com.scape.pixscape.viewmodels.TraceViewModel
-import com.scape.pixscape.viewmodels.TraceViewModelFactory
 import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.fragments.CameraFragment
 import com.scape.pixscape.models.dto.GpsTrace
 import com.scape.pixscape.models.dto.ScapeTrace
 import com.scape.pixscape.utils.setSystemBarTheme
 import com.scape.pixscape.utils.showImmersive
+import com.scape.pixscape.viewmodels.TraceViewModel
+import com.scape.pixscape.viewmodels.TraceViewModelFactory
 import kotlinx.android.synthetic.main.trace_history_row.view.*
 import java.text.SimpleDateFormat
 import java.util.*
@@ -60,7 +58,7 @@ internal class TraceHistoryAdapter(private val activity: FragmentActivity) : Rec
 
         @SuppressLint("SetTextI18n")
         fun setData(gpsTrace: GpsTrace, scapeTrace: ScapeTrace) {
-            itemView.history_trace_date.text = SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(gpsTrace.date)
+            itemView.history_trace_date.text = SimpleDateFormat("dd MMMM yyyy HH:mm:ss", Locale.getDefault()).format(gpsTrace.date)
             itemView.history_distance.text = "%.2f KM".format(gpsTrace.routeSections.sumByDouble { it.distance.toDouble() } / 1000)
             val formattedTime = String.format("%02d:%02d",
                                               TimeUnit.MILLISECONDS.toHours(gpsTrace.timeInMillis),

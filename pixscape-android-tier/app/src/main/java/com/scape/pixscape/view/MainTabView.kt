@@ -27,7 +27,7 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
 
     private lateinit var startTimerButton: FloatingActionButton
     private lateinit var pauseTimerButton: FloatingActionButton
-    private lateinit var stopTimerButton: FloatingActionButton
+    private lateinit var stopTimerButton: ImageView
 
     private lateinit var viewTabIndicator: View
 

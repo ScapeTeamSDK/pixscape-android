@@ -206,7 +206,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 TrackTraceService.paused = false
 
                 play_timer_button.hide()
-                stop_timer_button.hide()
+                stop_timer_button.visibility = View.GONE
 
                 pause_timer_button.show()
             }
@@ -218,7 +218,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             pause_timer_button.hide()
 
             play_timer_button.show()
-            stop_timer_button.show()
+            stop_timer_button.visibility = View.VISIBLE
 
             timerState = TimerState.Paused
         }
@@ -265,7 +265,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                         // hide all play/pause/stop buttons, timer and minimap when not on main screen
                         play_timer_button.hide()
                         pause_timer_button.hide()
-                        stop_timer_button.hide()
+                        stop_timer_button.visibility = View.GONE
 
                         time.visibility = View.GONE
                         card_view_minimap_container.visibility = View.GONE
@@ -287,7 +287,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                             }
                             TimerState.Paused -> {
                                 play_timer_button.show()
-                                stop_timer_button.show()
+                                stop_timer_button.visibility = View.VISIBLE
 
                                 time.visibility = View.VISIBLE
                             }
@@ -302,7 +302,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                         // hide all play/pause/stop buttons, timer and minimap when not on main screen
                         play_timer_button.hide()
                         pause_timer_button.hide()
-                        stop_timer_button.hide()
+                        stop_timer_button.visibility = View.GONE
 
                         time.visibility = View.GONE
                         card_view_minimap_container.visibility = View.GONE
@@ -352,8 +352,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         time?.base = SystemClock.elapsedRealtime()
 
         pause_timer_button?.hide()
-        stop_timer_button?.hide()
-
+        stop_timer_button?.visibility = View.GONE
         dots_view?.visibility = View.GONE
 
         view_switch_bottom?.postDelayed({view_switch_bottom?.visibility = View.VISIBLE}, 2000)
@@ -407,7 +406,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 time.base = SystemClock.elapsedRealtime() - measuredTimeInMillis
 
                 play_timer_button.show()
-                stop_timer_button.show()
+                stop_timer_button.visibility = View.VISIBLE
             }
         }
     }

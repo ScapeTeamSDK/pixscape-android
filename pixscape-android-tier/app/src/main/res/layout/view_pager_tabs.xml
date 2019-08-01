@@ -52,11 +52,10 @@
         android:layout_gravity="center|bottom"
         android:visibility="gone"/>
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <ImageView
         android:id="@+id/stop_timer_button"
         android:layout_width="55dp"
         android:layout_height="55dp"
-        app:fabCustomSize="55dp"
         app:backgroundTint="@color/fab_color_stop"
         android:layout_marginBottom="8dp"
         android:src="@drawable/ic_stop"
