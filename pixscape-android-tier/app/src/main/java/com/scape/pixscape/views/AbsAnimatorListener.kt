@@ -1,4 +1,4 @@
-package com.scape.pixscape.view
+package com.scape.pixscape.views
 
 import android.animation.Animator
 

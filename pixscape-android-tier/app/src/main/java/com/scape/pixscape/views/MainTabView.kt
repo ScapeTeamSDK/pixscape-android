@@ -1,4 +1,4 @@
-package com.scape.pixscape.view
+package com.scape.pixscape.views
 
 import android.animation.ArgbEvaluator
 import android.content.Context
@@ -51,6 +51,42 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
         initialize()
     }
 
+    private fun initialize() {
+        val view: View = LayoutInflater.from(context).inflate(R.layout.view_pager_tabs, this, true)
+
+        cameraViewCenterTab = view.findViewById(R.id.view_camera_center)
+        historyViewLeftTab = view.findViewById(R.id.view_history_left)
+        mapViewRightTab = view.findViewById(R.id.view_map_right)
+        toggleModeBottomSwitch = view.findViewById(R.id.view_switch_bottom)
+
+        startTimerButton = view.findViewById(R.id.play_timer_button)
+        pauseTimerButton = view.findViewById(R.id.pause_timer_button)
+        stopTimerButton  = view.findViewById(R.id.stop_timer_button)
+
+        viewTabIndicator = view.findViewById(R.id.view_tab_indicator)
+
+        //color
+        centerColor = ContextCompat.getColor(context, R.color.color_white)
+        sideColor = ContextCompat.getColor(context, R.color.color_grey)
+
+        //method to graduate color
+        argbEvaluator = ArgbEvaluator()
+
+        //a distance in dp
+        centerPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80F, resources.displayMetrics).toInt()
+
+        // to compute the positions of tabs when swiping right/left
+        toggleModeBottomSwitch.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                //position x after transaction finish
+                endViewTranslationX = ((view_circle_invisible_bottom.x - historyViewLeftTab.x) - centerPadding).toInt()
+                view_circle_invisible_bottom.viewTreeObserver.removeOnGlobalLayoutListener(this)
+
+                centerTranslationY = height - view_circle_invisible_bottom.bottom
+            }
+        })
+    }
+
     fun setUpWithViewPager(viewPager: ViewPager) {
         viewPager.addOnPageChangeListener(this)
 
@@ -86,42 +122,6 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
                 }
             }
         }
-    }
-
-    private fun initialize() {
-        val view: View = LayoutInflater.from(context).inflate(R.layout.view_pager_tabs, this, true)
-
-        cameraViewCenterTab = view.findViewById(R.id.view_camera_center)
-        historyViewLeftTab = view.findViewById(R.id.view_history_left)
-        mapViewRightTab = view.findViewById(R.id.view_map_right)
-        toggleModeBottomSwitch = view.findViewById(R.id.view_switch_bottom)
-
-        startTimerButton = view.findViewById(R.id.play_timer_button)
-        pauseTimerButton = view.findViewById(R.id.pause_timer_button)
-        stopTimerButton  = view.findViewById(R.id.stop_timer_button)
-
-        viewTabIndicator = view.findViewById(R.id.view_tab_indicator)
-
-        //color
-        centerColor = ContextCompat.getColor(context, R.color.color_white)
-        sideColor = ContextCompat.getColor(context, R.color.color_grey)
-
-        //method to graduate color
-        argbEvaluator = ArgbEvaluator()
-
-        //a distance in dp
-        centerPadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 80F, resources.displayMetrics).toInt()
-
-        // to compute the positions of tabs when swiping right/left
-        toggleModeBottomSwitch.viewTreeObserver.addOnGlobalLayoutListener(object : ViewTreeObserver.OnGlobalLayoutListener {
-            override fun onGlobalLayout() {
-                //position x after transaction finish
-                endViewTranslationX = ((view_circle_invisible_bottom.x - historyViewLeftTab.x) - centerPadding).toInt()
-                view_circle_invisible_bottom.viewTreeObserver.removeOnGlobalLayoutListener(this)
-
-                centerTranslationY = height - view_circle_invisible_bottom.bottom
-            }
-        })
     }
 
     private fun setColor(fractionFromCenter: Float) {

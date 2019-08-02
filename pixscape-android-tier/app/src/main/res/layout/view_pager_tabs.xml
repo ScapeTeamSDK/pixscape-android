@@ -91,9 +91,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:switchPadding="10dp"
-        android:textColor="@color/color_white"/>
+        android:textColor="@color/color_white"
+        android:enabled="false"/>
 
-    <com.scape.pixscape.view.DotsProgressIndicator
+    <com.scape.pixscape.views.DotsProgressIndicator
         android:id="@+id/dots_view"
         android:layout_width="120dp"
         android:layout_height="wrap_content"

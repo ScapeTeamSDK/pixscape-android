@@ -19,7 +19,7 @@
         android:layout_height="match_parent"
         android:translationZ="2dp"/>
 
-    <com.scape.pixscape.view.MainTabView
+    <com.scape.pixscape.views.MainTabView
         android:id="@+id/main_tab_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

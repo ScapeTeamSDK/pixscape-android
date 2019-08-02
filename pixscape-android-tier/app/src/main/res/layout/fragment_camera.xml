@@ -34,6 +34,8 @@
         android:keepScreenOn="true"
         app:cameraPictureSizeMinWidth="@integer/picture_min_width"
         app:cameraPictureSizeMinHeight="@integer/picture_min_height"
+        app:cameraPictureSizeMaxWidth="@integer/picture_max_width"
+        app:cameraPictureSizeMaxHeight="@integer/picture_max_height"
         app:cameraPictureSizeSmallest="true"
         app:cameraPictureSizeBiggest="false"
         app:cameraExperimental="true"

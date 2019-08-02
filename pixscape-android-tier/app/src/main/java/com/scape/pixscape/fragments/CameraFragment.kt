@@ -4,14 +4,14 @@ import android.annotation.SuppressLint
 import android.content.*
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
 import android.os.Parcelable
 import android.os.SystemClock
 import android.util.Log
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
+import android.view.animation.AlphaAnimation
 import android.widget.RelativeLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
@@ -58,7 +58,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
     companion object {
         private var isContinuousModeEnabled: Boolean = false
-        const val CONTINUOUS_MODE = "com.scape.pixscape.view.maintabview.continuousmode"
+        const val CONTINUOUS_MODE = "com.scape.pixscape.views.maintabview.continuousmode"
 
         const val BROADCAST_ACTION_TIME = "com.scape.pixscape.camerafragment.broadcastreceivertime"
         const val BROADCAST_ACTION_GPS_LOCATION = "com.scape.pixscape.camerafragment.broadcastreceivergpslocation"
@@ -164,21 +164,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
     // region Private
 
-    private fun showErrorMessage() {
-        when(scapeSessionState) {
-            ScapeSessionState.AUTHENTICATION_ERROR, ScapeSessionState.NETWORK_ERROR -> {
-                container?.showSnackbar("Something went wrong with your internet connection, try again",
-                                        R.color.red,
-                                        4500)
-            }
-            ScapeSessionState.LOCKING_POSITION_ERROR -> {
-                container?.showSnackbar("Could not lock your position, try again",
-                                        R.color.red,
-                                        4500)
-            }
-        }
-    }
-
     private fun bindings() {
         view_camera_center.setOnClickListener {
             if (view_pager.currentItem != 1) {
@@ -228,12 +213,14 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
             startTrackTraceActivity()
         }
+
+        view_switch_bottom.isEnabled = true
     }
 
     /** Method used to re-draw the camera UI controls, called every time configuration changes */
     @SuppressLint("RestrictedApi")
     private fun views() {
-        // Inflate a new view containing all UI for controlling the camera
+        // Inflate a new views containing all UI for controlling the camera
         val cameraUiContainer = View.inflate(requireContext(), R.layout.camera_ui_container, container)
 
         val supportFragmentManager = fragmentManager ?: return
@@ -242,7 +229,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         val adapter = ViewPagerAdapter(supportFragmentManager)
         view_pager.adapter = adapter
 
-        // initialize view pager
+        // initialize views pager
         main_tab_view.setUpWithViewPager(view_pager)
 
         //set default
@@ -321,7 +308,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         if(!isContinuousModeEnabled) {
             view_switch_bottom?.visibility = View.GONE
             dots_view?.visibility = View.VISIBLE
-            container?.showSnackbar("Localizing, please wait..", R.color.scape_blue, 2500)
+            container.showSnackbar("Localizing, please wait..", R.color.scape_blue, 2500)
         }
 
         CameraFragment.isContinuousModeEnabled = isContinuousModeEnabled
@@ -507,6 +494,21 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
     }
 
+    private fun showErrorMessage() {
+        when(scapeSessionState) {
+            ScapeSessionState.AUTHENTICATION_ERROR, ScapeSessionState.NETWORK_ERROR -> {
+                container.showSnackbar("Something went wrong with your internet connection, try again",
+                                       R.color.red,
+                                       4500)
+            }
+            ScapeSessionState.LOCKING_POSITION_ERROR -> {
+                container.showSnackbar("Could not lock your position, try again",
+                                       R.color.red,
+                                       4500)
+            }
+        }
+    }
+
     // endregion
 
     // region Fragment
@@ -572,6 +574,9 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         container = view as RelativeLayout
 
+        sharedPref = activity?.getSharedPreferences(getString(R.string.preference_file_key),
+                                                    Context.MODE_PRIVATE)
+
         miniMapView = container.findViewById(R.id.mini_map_view)
         miniMapView?.onCreate(savedInstanceState)
 
@@ -592,8 +597,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
             bindings()
         }
-
-        sharedPref = activity?.getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
 
         val intentFilter = IntentFilter()
         intentFilter.addAction(BROADCAST_ACTION_GPS_LOCATION)

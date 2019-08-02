@@ -32,6 +32,8 @@ import java.util.concurrent.TimeUnit
 
 class TrackTraceService : Service(), ScapeSessionObserver {
 
+    private var isDebug = false
+
     private var isContinuousModeEnabled: Boolean = false
     private var sharedPref: SharedPreferences? = null
     private lateinit var context: Context
@@ -61,7 +63,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
         startUpdatingLocation(isContinuousModeEnabled)
 
-        if(BuildConfig.DEBUG) {
+        if(isDebug) {
             Toast.makeText(this,
                            "Tracking started: $isContinuousModeEnabled",
                            Toast.LENGTH_LONG).show()
@@ -205,7 +207,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
         scapeClient?.scapeSession?.stopFetch()
 
-        if(BuildConfig.DEBUG) {
+        if(isDebug) {
             Toast.makeText(this,
                            "Tracking stopped. GPS Locations: ${gpsLocations.size} Scape Locations: ${scapeLocations.size}",
                            Toast.LENGTH_LONG).show()
@@ -282,9 +284,18 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     }
 
     private fun onScapeLocationUpdatedSingleMode(measurements: ScapeMeasurements?) {
-        if (measurements == null || measurements.measurementsStatus != ScapeMeasurementsStatus.RESULTS_FOUND) return
+        val scapeMeasurements = measurements ?: return
 
-        val newLatLng = measurements.latLng
+        if (scapeMeasurements?.measurementsStatus != ScapeMeasurementsStatus.RESULTS_FOUND) {
+            return
+        }
+
+        val score = scapeMeasurements.confidenceScore ?: 0.0
+        if(score < 3.0) {
+            return
+        }
+
+        val newLatLng = scapeMeasurements.latLng
         if(newLatLng != null) {
             // single mode is enabled so the RouteSection's beginning and end will be the same
             // basically a single location
@@ -310,6 +321,9 @@ class TrackTraceService : Service(), ScapeSessionObserver {
             lastScapeLocation = null
             return
         }
+
+        val score = measurements?.confidenceScore ?: 0.0
+        if (score < 3.0) return
 
         val lastLocation = lastScapeLocation
 
