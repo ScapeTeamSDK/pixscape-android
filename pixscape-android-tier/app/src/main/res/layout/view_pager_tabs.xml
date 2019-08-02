@@ -85,7 +85,7 @@
         android:id="@+id/view_switch_bottom"
         android:layout_gravity="center|bottom"
         android:layout_marginBottom="20dp"
-        android:text="Single"
+        android:text="@string/single"
         android:scaleX="1.2"
         android:scaleY="1.2"
         android:layout_width="wrap_content"

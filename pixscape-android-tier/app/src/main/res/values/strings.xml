@@ -30,6 +30,10 @@
     <string name="confirm_delete">Are you sure you want to delete this trace?</string>
     <string name="positive_delete">Delete</string>
     <string name="negative_delete">Cancel</string>
+
+    <string name="single">Single</string>
+    <string name="repeat">Repeated</string>
+
     <string-array name="distance_units_array">
         <item>kilometers</item>
         <item>meters</item>

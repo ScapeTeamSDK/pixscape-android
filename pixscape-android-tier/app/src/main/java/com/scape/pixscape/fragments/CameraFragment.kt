@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.os.SystemClock
@@ -32,6 +33,7 @@ import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
 import com.scape.pixscape.utils.CameraIntrinsics
+import com.scape.pixscape.utils.setMargins
 import com.scape.pixscape.utils.showSnackbar
 import com.scape.scapekit.ScapeSessionState
 import com.scape.scapekit.setByteBuffer
@@ -301,7 +303,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
             override fun onPageSelected(position: Int) {}
         })
-
     }
 
     private fun startForegroundTrackService(isContinuousModeEnabled: Boolean) {

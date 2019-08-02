@@ -13,7 +13,7 @@
         android:layout_height="150dp"
         android:layout_alignParentRight="true"
         android:layout_marginRight="15dp"
-        android:layout_marginTop="30dp"
+        android:layout_marginTop="35dp"
         app:cardCornerRadius="15dp"
         app:cardElevation="3dp">
 
@@ -53,10 +53,5 @@
         app:cameraAutoFocusMarker="@string/cameraview_default_autofocus_marker">
 
     </com.otaliastudios.cameraview.CameraView>
-
-    <!--<SurfaceView-->
-        <!--android:id="@+id/view_finder"-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="match_parent"/>-->
 
 </RelativeLayout>
