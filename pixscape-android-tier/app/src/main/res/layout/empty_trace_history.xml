@@ -20,24 +20,12 @@
         />
 
     <TextView
-        android:id="@+id/empty_list_title"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/empty_trace_title"
-        android:textSize="@dimen/empty_trace_history_text_size"
-        android:layout_below="@+id/empty_list_logo"
-        android:layout_centerHorizontal="true"
-        android:padding="@dimen/empty_trace_history_margin_small"
-        android:textColor="@color/text_color_black"
-        />
-
-    <TextView
         android:id="@+id/empty_list_message"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/empty_trace_message"
         android:textSize="@dimen/empty_trace_history_text_size"
-        android:layout_below="@+id/empty_list_title"
+        android:layout_below="@+id/empty_list_logo"
         android:layout_centerHorizontal="true"
         android:gravity="center"
         android:padding="@dimen/empty_trace_history_margin_small"

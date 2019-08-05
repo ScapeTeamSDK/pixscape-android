@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.app.Application
 import android.content.Intent
 import android.os.Parcelable
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -24,6 +25,7 @@ import com.scape.pixscape.utils.showImmersive
 import com.scape.pixscape.viewmodels.TraceViewModel
 import com.scape.pixscape.viewmodels.TraceViewModelFactory
 import kotlinx.android.synthetic.main.trace_history_row.view.*
+import java.lang.IndexOutOfBoundsException
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -34,7 +36,7 @@ internal class TraceHistoryAdapter(private val activity: FragmentActivity) : Rec
     private var mScapeTraces: List<ScapeTrace> = Collections.emptyList()
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TraceHistoryViewHolder {
-        val itemView = LayoutInflater.from(activity).inflate(R.layout.trace_history_row, parent, false)
+        val itemView = LayoutInflater.from(this.activity).inflate(R.layout.trace_history_row, parent, false)
         return TraceHistoryViewHolder(itemView)
     }
 
@@ -43,8 +45,19 @@ internal class TraceHistoryAdapter(private val activity: FragmentActivity) : Rec
     }
 
     override fun onBindViewHolder(holder: TraceHistoryViewHolder, position: Int) {
+        if(mGpsTraces.isEmpty()) return // bail if no gps trace
+
         val gpsTrace = mGpsTraces[position]
-        val scapeTrace = if(mScapeTraces.isEmpty()) ScapeTrace(Date(0L), 0L, Collections.emptyList()) else mScapeTraces[position]
+
+        var scapeTrace = ScapeTrace(Date(0L), 0L, Collections.emptyList())
+        if(mScapeTraces.isNotEmpty()) {
+            try {
+                scapeTrace = mScapeTraces[position]
+            } catch (e: IndexOutOfBoundsException) { // TODO remove this horrrible try/catch by making sure position maps both gpsTraces and scapeTraces
+                Log.e("TraceHistoryAdapter", e.toString())
+            }
+        }
+
         holder.setData(gpsTrace, scapeTrace)
     }
 
@@ -58,7 +71,7 @@ internal class TraceHistoryAdapter(private val activity: FragmentActivity) : Rec
 
         @SuppressLint("SetTextI18n")
         fun setData(gpsTrace: GpsTrace, scapeTrace: ScapeTrace) {
-            itemView.history_trace_date.text = SimpleDateFormat("dd MMMM yyyy - HH:mm:ss", Locale.getDefault()).format(gpsTrace.date)
+            itemView.history_trace_date.text = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(gpsTrace.date)
             itemView.history_distance.text = "%.2f KM".format(gpsTrace.routeSections.sumByDouble { it.distance.toDouble() } / 1000)
             val formattedTime = String.format("%02d:%02d",
                                               TimeUnit.MILLISECONDS.toHours(gpsTrace.timeInMillis),

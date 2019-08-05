@@ -45,7 +45,8 @@ import kotlin.experimental.and
 
 enum class TimerState { Idle, Running, Paused }
 
-internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
+internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener,
+                                ViewPager.OnPageChangeListener {
 
     private var luma: ByteBuffer? = null
     private var cameraIntrinsics: CameraIntrinsics? = null
@@ -215,8 +216,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
             startTrackTraceActivity()
         }
-
-        view_switch_bottom.isEnabled = true
     }
 
     /** Method used to re-draw the camera UI controls, called every time configuration changes */
@@ -237,79 +236,15 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         //set default
         view_pager.currentItem = 1
 
-        val currentContext = context ?: return
-
-        val scapeColor = ContextCompat.getColor(currentContext, R.color.scape_color)
-
         //listener to viewpager scroll page
-        view_pager.addOnPageChangeListener(object : ViewPager.OnPageChangeListener {
-
-            override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
-                when (position) {
-                    0 -> {
-                        main_view.setBackgroundColor(scapeColor)
-                        //while paage scroll to screen 1 positionoffset go up, so alpha go down
-                        main_view.alpha = (1 - positionOffset)
-
-                        // hide all play/pause/stop buttons, timer and minimap when not on main screen
-                        play_timer_button.hide()
-                        pause_timer_button.hide()
-                        stop_timer_button.visibility = View.GONE
-
-                        time.visibility = View.GONE
-                        card_view_minimap_container.visibility = View.GONE
-                    }
-                    1 -> {
-                        main_view.setBackgroundColor(scapeColor)
-                        //default posotionOfSet is 0, while page scroll to 2, go up, so aplha up
-                        main_view.alpha = positionOffset
-
-                        card_view_minimap_container.visibility = View.VISIBLE
-
-                        when (timerState) {
-                            TimerState.Idle   -> {
-                                if(!view_switch_bottom.isChecked) return
-
-                                play_timer_button.show()
-
-                                time.visibility = View.VISIBLE
-                            }
-                            TimerState.Paused -> {
-                                play_timer_button.show()
-                                stop_timer_button.visibility = View.VISIBLE
-
-                                time.visibility = View.VISIBLE
-                            }
-                            TimerState.Running -> {
-                                pause_timer_button.show()
-
-                                time.visibility = View.VISIBLE
-                            }
-                        }
-                    }
-                    2-> {
-                        // hide all play/pause/stop buttons, timer and minimap when not on main screen
-                        play_timer_button.hide()
-                        pause_timer_button.hide()
-                        stop_timer_button.visibility = View.GONE
-
-                        time.visibility = View.GONE
-                        card_view_minimap_container.visibility = View.GONE
-                    }
-                }
-            }
-
-            override fun onPageScrollStateChanged(state: Int) {}
-
-            override fun onPageSelected(position: Int) {}
-        })
+        view_pager.addOnPageChangeListener(this)
     }
 
     private fun startForegroundTrackService(isContinuousModeEnabled: Boolean) {
         if(!isContinuousModeEnabled) {
             view_switch_bottom?.visibility = View.GONE
             dots_view?.visibility = View.VISIBLE
-            container.showSnackbar("Localizing, please wait..", R.color.scape_blue, 2500)
+            container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, 3000)
         }
 
         CameraFragment.isContinuousModeEnabled = isContinuousModeEnabled
@@ -557,11 +492,17 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         PixscapeApplication.sharedInstance?.scapeClient?.stop({}, {})
 
+        // clean up broadcast receiver
         try {
             activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
         } catch (e: IllegalArgumentException) {
             Log.e("TrackTraceFrag", e.toString())
         }
+
+        // clean up viewpager
+        main_tab_view.resetViewPager(view_pager)
+        view_pager.removeOnPageChangeListener(this)
+        view_pager.adapter = null
 
         with(sharedPref!!.edit()) {
             putInt(getString(R.string.timer_state), timerState.ordinal)
@@ -607,6 +548,73 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     // endregion Fragment
+
+    // region onPageChangeListener
+
+    override fun onPageScrolled(position: Int, positionOffset: Float, positionOffsetPixels: Int) {
+        val currentContext = context ?: return
+
+        val colorWhite = ContextCompat.getColor(currentContext, R.color.color_white)
+
+        when (position) {
+            0 -> {
+                main_view.setBackgroundColor(colorWhite)
+                //while paage scroll to screen 1 positionoffset go up, so alpha go down
+                main_view.alpha = (1 - positionOffset)
+
+                // hide all play/pause/stop buttons, timer and minimap when not on main screen
+                play_timer_button.hide()
+                pause_timer_button.hide()
+                stop_timer_button.visibility = View.GONE
+
+                time.visibility = View.GONE
+                card_view_minimap_container.visibility = View.GONE
+            }
+            1 -> {
+                main_view.setBackgroundColor(colorWhite)
+                //default posotionOfSet is 0, while page scroll to 2, go up, so aplha up
+                main_view.alpha = positionOffset
+
+                card_view_minimap_container.visibility = View.VISIBLE
+
+                when (timerState) {
+                    TimerState.Idle   -> {
+                        if(!view_switch_bottom.isChecked) return
+
+                        play_timer_button.show()
+
+                        time.visibility = View.VISIBLE
+                    }
+                    TimerState.Paused -> {
+                        play_timer_button.show()
+                        stop_timer_button.visibility = View.VISIBLE
+
+                        time.visibility = View.VISIBLE
+                    }
+                    TimerState.Running -> {
+                        pause_timer_button.show()
+
+                        time.visibility = View.VISIBLE
+                    }
+                }
+            }
+            2-> {
+                // hide all play/pause/stop buttons, timer and minimap when not on main screen
+                play_timer_button.hide()
+                pause_timer_button.hide()
+                stop_timer_button.visibility = View.GONE
+
+                time.visibility = View.GONE
+                card_view_minimap_container.visibility = View.GONE
+            }
+        }
+    }
+
+    override fun onPageScrollStateChanged(state: Int) {}
+
+    override fun onPageSelected(position: Int) {}
+
+    // endregion
 
     // region GoogleMap
 

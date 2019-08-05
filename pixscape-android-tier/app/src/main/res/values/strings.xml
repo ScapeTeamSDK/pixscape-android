@@ -79,5 +79,6 @@
     <string name="empty_trace_message">You do not have any traces yet.</string>
 
     <string name="cameraview_default_autofocus_marker">com.otaliastudios.cameraview.markers.DefaultAutoFocusMarker</string>
+    <string name="my_traces">My Traces</string>
 
 </resources>

@@ -20,6 +20,23 @@
         android:textSize="@dimen/chrono_text_size"
         android:visibility="gone"/>
 
+
+    <com.agrawalsuneet.dotsloader.loaders.LazyLoader
+        android:id="@+id/dots_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center"
+        app:lazyloader_animDur="800"
+        app:lazyloader_dotsDist="10dp"
+        app:lazyloader_dotsRadius="10dp"
+        app:lazyloader_firstDelayDur="150"
+        app:lazyloader_firstDotColor="@color/scape_color"
+        app:lazyloader_interpolator="@android:anim/decelerate_interpolator"
+        app:lazyloader_secondDelayDur="300"
+        app:lazyloader_secondDotColor="@color/scape_blue"
+        app:lazyloader_thirdDotColor="@color/scape_black"
+        android:visibility="gone"/>
+
     <ImageView
         android:id="@+id/view_camera_center"
         android:layout_width="88dp"
@@ -91,21 +108,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:switchPadding="10dp"
-        android:textColor="@color/color_white"
-        android:enabled="false"/>
-
-    <com.scape.pixscape.views.DotsProgressIndicator
-        android:id="@+id/dots_view"
-        android:layout_width="120dp"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center|bottom"
-        android:layout_marginBottom="30dp"
-        app:dotsDiameter="12dp"
-        app:dotsMode="setSize"
-        app:dotsSpacing="2dp"
-        app:numberOfDots="6"
-        app:dotColors="@array/dotColors"
-        android:visibility="gone"/>
+        android:textColor="@color/color_white"/>
 
     <ImageView
         android:id="@+id/view_circle_invisible_bottom"

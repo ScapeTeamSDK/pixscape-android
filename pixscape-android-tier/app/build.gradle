@@ -109,6 +109,9 @@ dependencies {
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.0.0-RC1'
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.0.0-RC1'
 
+    // 3rd party
+    implementation 'com.agrawalsuneet.androidlibs:dotsloader:1.4'
+
     // Testing
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.1.0'

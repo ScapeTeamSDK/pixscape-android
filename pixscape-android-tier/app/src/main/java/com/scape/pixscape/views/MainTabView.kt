@@ -15,6 +15,7 @@ import androidx.viewpager.widget.ViewPager
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
+import com.scape.pixscape.utils.dpToPx
 import com.scape.pixscape.utils.setSystemBarTheme
 import kotlinx.android.synthetic.main.view_pager_tabs.view.*
 
@@ -80,9 +81,12 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
             override fun onGlobalLayout() {
                 //position x after transaction finish
                 endViewTranslationX = ((view_circle_invisible_bottom.x - historyViewLeftTab.x) - centerPadding).toInt()
-                view_circle_invisible_bottom.viewTreeObserver.removeOnGlobalLayoutListener(this)
 
-                centerTranslationY = height - view_circle_invisible_bottom.bottom
+                centerTranslationY = height - view_circle_invisible_bottom.bottom + 20.dpToPx(context)
+
+                if(view_circle_invisible_bottom.viewTreeObserver.isAlive) {
+                    view_circle_invisible_bottom.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                }
             }
         })
     }
@@ -91,6 +95,10 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
         viewPager.addOnPageChangeListener(this)
 
         bindings(viewPager)
+    }
+
+    fun resetViewPager(viewPager: ViewPager) {
+        viewPager.removeOnPageChangeListener(this)
     }
 
     private fun bindings(viewPager: ViewPager) {
