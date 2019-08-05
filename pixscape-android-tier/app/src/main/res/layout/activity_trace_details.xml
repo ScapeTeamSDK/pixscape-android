@@ -48,7 +48,7 @@
                     android:layout_height="@dimen/summary_icon_size"
                     android:layout_marginEnd="@dimen/trace_details_icon_text_spacing"
                     android:padding="@dimen/summary_icon_padding"
-                    android:src="@mipmap/ic_time" />
+                    android:src="@drawable/time" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -80,7 +80,7 @@
                     android:layout_height="@dimen/summary_icon_size"
                     android:layout_marginEnd="@dimen/trace_details_icon_text_spacing"
                     android:padding="@dimen/summary_icon_padding"
-                    android:src="@mipmap/ic_distance" />
+                    android:src="@drawable/distance" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -112,7 +112,7 @@
                     android:layout_height="@dimen/summary_icon_size"
                     android:layout_marginEnd="@dimen/trace_details_icon_text_spacing"
                     android:padding="@dimen/summary_icon_padding"
-                    android:src="@mipmap/ic_speed" />
+                    android:src="@drawable/speed" />
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -144,7 +144,7 @@
                     android:layout_height="@dimen/summary_icon_size"
                     android:layout_marginEnd="@dimen/trace_details_icon_text_spacing"
                     android:padding="@dimen/summary_icon_padding"
-                    android:src="@mipmap/ic_pace" />
+                    android:src="@drawable/pace" />
 
                 <TextView
                     android:layout_width="wrap_content"

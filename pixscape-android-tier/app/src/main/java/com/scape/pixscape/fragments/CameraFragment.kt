@@ -442,6 +442,11 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                                        R.color.red,
                                        4500)
             }
+            ScapeSessionState.NO_ERROR                                              -> {}
+            ScapeSessionState.LOCATION_SENSORS_ERROR                                -> {}
+            ScapeSessionState.MOTION_SENSORS_ERROR                                  -> {}
+            ScapeSessionState.IMAGE_SENSORS_ERROR                                   -> {}
+            ScapeSessionState.UNEXPECTED_ERROR                                      -> {}
         }
     }
 

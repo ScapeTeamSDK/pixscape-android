@@ -48,7 +48,7 @@
                     android:layout_width="@dimen/history_icon_size"
                     android:layout_height="@dimen/history_icon_size"
                     android:contentDescription="@string/icon_content_description"
-                    android:src="@mipmap/ic_distance"/>
+                    android:src="@drawable/distance"/>
                 <TextView
                         android:id="@+id/history_distance"
                         android:layout_width="wrap_content"
@@ -70,7 +70,7 @@
                     android:layout_width="@dimen/history_icon_size"
                     android:layout_height="@dimen/history_icon_size"
                     android:contentDescription="@string/icon_content_description"
-                    android:src="@mipmap/ic_time"/>
+                    android:src="@drawable/time"/>
                 <TextView
                     android:id="@+id/history_time"
                     android:layout_width="wrap_content"
