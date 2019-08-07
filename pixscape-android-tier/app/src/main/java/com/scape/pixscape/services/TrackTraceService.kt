@@ -243,9 +243,10 @@ class TrackTraceService : Service(), ScapeSessionObserver {
             putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
         }
 
-        val intent = Intent()
-        intent.action = BROADCAST_ACTION_GPS_LOCATION
-        intent.putExtras(bundle)
+        val intent = Intent().apply {
+            action = BROADCAST_ACTION_GPS_LOCATION
+            putExtras(bundle)
+        }
 
         sendBroadcast(intent)
     }
@@ -276,9 +277,10 @@ class TrackTraceService : Service(), ScapeSessionObserver {
             putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
         }
 
-        val intent = Intent()
-        intent.action = BROADCAST_ACTION_GPS_LOCATION
-        intent.putExtras(bundle)
+        val intent = Intent().apply {
+            action = BROADCAST_ACTION_GPS_LOCATION
+            putExtras(bundle)
+        }
 
         sendBroadcast(intent)
     }
@@ -308,9 +310,10 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         val bundle = Bundle().apply {
             putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
         }
-        val intent = Intent()
-        intent.action = BROADCAST_ACTION_SCAPE_LOCATION
-        intent.putExtras(bundle)
+        val intent = Intent().apply {
+            action = BROADCAST_ACTION_SCAPE_LOCATION
+            putExtras(bundle)
+        }
 
         sendBroadcast(intent)
     }
@@ -342,9 +345,10 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         val bundle = Bundle().apply {
             putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
         }
-        val intent = Intent()
-        intent.action = BROADCAST_ACTION_SCAPE_LOCATION
-        intent.putExtras(bundle)
+        val intent = Intent().apply {
+            action = BROADCAST_ACTION_SCAPE_LOCATION
+            putExtras(bundle)
+        }
 
         sendBroadcast(intent)
     }
@@ -371,9 +375,10 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
     override fun onScapeSessionError(session: ScapeSession?, state: ScapeSessionState, error: String) {
         if(!isContinuousModeEnabled) {
-            val intent = Intent()
-            intent.action = BROADCAST_ACTION_STOP_TIMER
-            intent.putExtra(SCAPE_ERROR_STATE_KEY, state.ordinal)
+            val intent = Intent().apply {
+                action = BROADCAST_ACTION_STOP_TIMER
+                putExtra(SCAPE_ERROR_STATE_KEY, state.ordinal)
+            }
 
             sendBroadcast(intent)
         }

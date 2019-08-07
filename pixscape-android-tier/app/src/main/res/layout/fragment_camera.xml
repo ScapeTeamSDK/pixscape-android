@@ -24,6 +24,11 @@
             app:liteMode="true"
             app:mapType="normal"/>
 
+        <com.exlyo.gmfmt.FloatingMarkerTitlesOverlay
+            android:id="@+id/map_floating_markers_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
     </androidx.cardview.widget.CardView>
 
     <com.otaliastudios.cameraview.CameraView

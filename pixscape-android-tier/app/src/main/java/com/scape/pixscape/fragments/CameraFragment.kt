@@ -19,6 +19,8 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.viewpager.widget.ViewPager
+import com.exlyo.gmfmt.FloatingMarkerTitlesOverlay
+import com.exlyo.gmfmt.MarkerInfo
 import com.google.android.gms.location.LocationServices
 import com.google.android.libraries.maps.*
 import com.google.android.libraries.maps.model.*
@@ -41,6 +43,8 @@ import kotlinx.android.synthetic.main.camera_ui_container.*
 import kotlinx.android.synthetic.main.fragment_camera.*
 import kotlinx.android.synthetic.main.view_pager_tabs.*
 import java.nio.ByteBuffer
+import java.util.*
+import kotlin.collections.ArrayList
 import kotlin.experimental.and
 
 enum class TimerState { Idle, Running, Paused }
@@ -56,6 +60,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
     private var miniMapView: MapView? = null
     private var miniMap: GoogleMap? = null
+    private var floatingMarkerTitlesOverlay: FloatingMarkerTitlesOverlay? = null
 
     private var sharedPref: SharedPreferences? = null
 
@@ -168,6 +173,10 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     // region Private
 
     private fun bindings() {
+        card_view_minimap_container.setOnClickListener {
+            view_pager.currentItem = 2
+        }
+
         view_camera_center.setOnClickListener {
             if (view_pager.currentItem != 1) {
                 view_pager.currentItem = 1
@@ -273,7 +282,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         timerState = TimerState.Idle
 
         if(isContinuousModeEnabled) {
-            miniMap?.clear() // to clear traces only
+            miniMap?.clear()
         }
 
         time?.base = SystemClock.elapsedRealtime()
@@ -350,14 +359,22 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         return BitmapDescriptorFactory.fromBitmap(bitmap)
     }
 
-    private fun placeMarkerOnMap(location: LatLng, color: Int) {
-        val markerOptions = MarkerOptions().position(location)
-        markerOptions.icon(vectorToBitmap(R.drawable.gps_user_location, resources.getColor(color)))
+    private fun placeMarkerOnMap(location: LatLng, color: Int, title: String) {
+        val markerInfo = MarkerInfo(location, title, Color.BLACK)
+
+        val markerOptions = MarkerOptions().apply {
+            position(location)
+            icon(vectorToBitmap(R.drawable.gps_user_location, resources.getColor(color)))
+        }
         miniMap?.addMarker(markerOptions)
+        floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
+                                               markerInfo)
     }
 
     @SuppressLint("MissingPermission")
     private fun setupMiniMap() {
+        floatingMarkerTitlesOverlay?.setSource(miniMap)
+
         miniMapView?.isClickable = false
 
         miniMap?.uiSettings?.isZoomControlsEnabled = false
@@ -395,6 +412,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
     private fun fillMap() {
         try {
+            floatingMarkerTitlesOverlay?.clearMarkers()
             miniMap?.clear()
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
@@ -409,21 +427,23 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
 
         if (gpsRouteSections.isNotEmpty()) {
-            placeMarkerOnMap(gpsRouteSections.last().end.toLatLng(), R.color.color_primary_dark)
+            placeMarkerOnMap(gpsRouteSections.last().end.toLatLng(), R.color.color_primary_dark, "GPS")
 
             miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
                                                                      18f))
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            miniMap?.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
-                                                      scapeRouteSections[i].end.toLatLng())
-                                        .color(ContextCompat.getColor(context!!, R.color.scape_color))
-                                        .width(10f))
+            if(scapeRouteSections[i].distance <= 15) { // if less than 15 meters draw line between points
+                miniMap?.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
+                                                           scapeRouteSections[i].end.toLatLng())
+                                             .color(ContextCompat.getColor(context!!, R.color.scape_color))
+                                             .width(10f))
+            }
         }
 
         if (scapeRouteSections.isNotEmpty()) {
-            placeMarkerOnMap(scapeRouteSections.last().end.toLatLng(), R.color.scape_color)
+            placeMarkerOnMap(scapeRouteSections.last().end.toLatLng(), R.color.scape_color, "SCAPE")
 
             miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
                                                                      18f))
@@ -530,6 +550,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         miniMapView?.getMapAsync(this)
         MapsInitializer.initialize(activity as MainActivity)
 
+        floatingMarkerTitlesOverlay = container.findViewById(R.id.map_floating_markers_overlay)
+
         viewFinder = container.findViewById(R.id.view_finder)
         viewFinder.setLifecycleOwner(this)
 
@@ -545,10 +567,11 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             bindings()
         }
 
-        val intentFilter = IntentFilter()
-        intentFilter.addAction(BROADCAST_ACTION_GPS_LOCATION)
-        intentFilter.addAction(BROADCAST_ACTION_SCAPE_LOCATION)
-        intentFilter.addAction(BROADCAST_ACTION_TIME)
+        val intentFilter = IntentFilter().apply {
+            addAction(BROADCAST_ACTION_GPS_LOCATION)
+            addAction(BROADCAST_ACTION_SCAPE_LOCATION)
+            addAction(BROADCAST_ACTION_TIME)
+        }
         activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
     }
 
