@@ -77,6 +77,12 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         val markerOptions = MarkerOptions().position(location)
         markerOptions.icon(vectorToBitmap(R.drawable.gps_user_location, resources.getColor(color)))
         fullMap.addMarker(markerOptions)
+
+        fullMap.addCircle(CircleOptions().center(location)
+                                 .radius(2.0)
+                                 .strokeColor(ContextCompat.getColor(context!!, color))
+                                 .fillColor(ContextCompat.getColor(context!!, color))
+                                 .strokeWidth(0.5f))
     }
 
     @SuppressLint("MissingPermission")
@@ -114,10 +120,17 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         }
 
         for (i in 0 until gpsRouteSections.size) {
-            fullMap.addPolyline(PolylineOptions().add(gpsRouteSections[i].beginning.toLatLng(),
-                                                      gpsRouteSections[i].end.toLatLng())
-                                    .color(ContextCompat.getColor(context!!, R.color.text_color_black))
-                                    .width(10f))
+            fullMap.addCircle(CircleOptions().center(gpsRouteSections[i].beginning.toLatLng())
+                                      .radius(2.0)
+                                      .strokeColor(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                      .fillColor(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                      .strokeWidth(0.5f))
+
+            fullMap.addCircle(CircleOptions().center(gpsRouteSections[i].end.toLatLng())
+                                      .radius(2.0)
+                                      .strokeColor(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                      .fillColor(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                      .strokeWidth(0.5f))
         }
 
         if (gpsRouteSections.isNotEmpty()) {
@@ -128,10 +141,17 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            fullMap.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
-                                                      scapeRouteSections[i].end.toLatLng())
-                                    .color(ContextCompat.getColor(context!!, R.color.scape_color))
-                                    .width(10f))
+            fullMap.addCircle(CircleOptions().center(scapeRouteSections[i].beginning.toLatLng())
+                                         .radius(2.0)
+                                         .strokeColor(ContextCompat.getColor(context!!, R.color.scape_color))
+                                         .fillColor(ContextCompat.getColor(context!!, R.color.scape_color))
+                                         .strokeWidth(0.5f))
+
+            fullMap.addCircle(CircleOptions().center(scapeRouteSections[i].end.toLatLng())
+                                         .radius(2.0)
+                                         .strokeColor(ContextCompat.getColor(context!!, R.color.scape_color))
+                                         .fillColor(ContextCompat.getColor(context!!, R.color.scape_color))
+                                         .strokeWidth(0.5f))
         }
 
         if (scapeRouteSections.isNotEmpty()) {

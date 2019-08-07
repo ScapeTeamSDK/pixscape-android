@@ -6,13 +6,13 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.location.Location
-import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.os.SystemClock
 import android.util.Log
-import android.view.*
-import android.view.animation.AlphaAnimation
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.RelativeLayout
 import androidx.core.content.ContextCompat
 import androidx.core.content.res.ResourcesCompat
@@ -35,7 +35,6 @@ import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
 import com.scape.pixscape.utils.CameraIntrinsics
-import com.scape.pixscape.utils.setMargins
 import com.scape.pixscape.utils.showSnackbar
 import com.scape.scapekit.ScapeSessionState
 import com.scape.scapekit.setByteBuffer
@@ -305,10 +304,13 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             @Suppress("UNCHECKED_CAST") val localGpsRouteSections = gpsRouteSections as ArrayList<Parcelable>
             @Suppress("UNCHECKED_CAST") val localScapeRouteSections = scapeRouteSections as ArrayList<Parcelable>
 
+            if (localGpsRouteSections.size <= 2) return // do not show TraceDetailsActivity if we do not have enough traces
+
             gpsRouteSections = ArrayList()
             scapeRouteSections = ArrayList()
 
-            if (localGpsRouteSections.isEmpty()) return
+            floatingMarkerTitlesOverlay?.clearMarkers()
+            miniMap?.clear()
 
             val bundle = Bundle().apply {
                 putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, localGpsRouteSections)
@@ -369,6 +371,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         miniMap?.addMarker(markerOptions)
         floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
                                                markerInfo)
+
+        miniMap?.addCircle(CircleOptions().center(location)
+                                  .radius(2.0)
+                                  .strokeColor(ContextCompat.getColor(context!!, color))
+                                  .fillColor(ContextCompat.getColor(context!!, color))
+                                  .strokeWidth(0.5f))
     }
 
     @SuppressLint("MissingPermission")
@@ -420,10 +428,17 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
 
         for (i in 0 until gpsRouteSections.size) {
-            miniMap?.addPolyline(PolylineOptions().add(gpsRouteSections[i].beginning.toLatLng(),
-                                                       gpsRouteSections[i].end.toLatLng())
-                                        .color(ContextCompat.getColor(context!!, R.color.text_color_black))
-                                        .width(10f))
+            miniMap?.addCircle(CircleOptions().center(gpsRouteSections[i].beginning.toLatLng())
+                                       .radius(2.0)
+                                       .strokeColor(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                       .fillColor(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                       .strokeWidth(0.5f))
+
+            miniMap?.addCircle(CircleOptions().center(gpsRouteSections[i].end.toLatLng())
+                                       .radius(2.0)
+                                       .strokeColor(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                       .fillColor(ContextCompat.getColor(context!!, R.color.text_color_black))
+                                       .strokeWidth(0.5f))
         }
 
         if (gpsRouteSections.isNotEmpty()) {
@@ -434,12 +449,17 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            if(scapeRouteSections[i].distance <= 15) { // if less than 15 meters draw line between points
-                miniMap?.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
-                                                           scapeRouteSections[i].end.toLatLng())
-                                             .color(ContextCompat.getColor(context!!, R.color.scape_color))
-                                             .width(10f))
-            }
+            miniMap?.addCircle(CircleOptions().center(scapeRouteSections[i].beginning.toLatLng())
+                                       .radius(2.0)
+                                       .strokeColor(ContextCompat.getColor(context!!, R.color.scape_color))
+                                       .fillColor(ContextCompat.getColor(context!!, R.color.scape_color))
+                                       .strokeWidth(0.5f))
+
+            miniMap?.addCircle(CircleOptions().center(scapeRouteSections[i].end.toLatLng())
+                                       .radius(2.0)
+                                       .strokeColor(ContextCompat.getColor(context!!, R.color.scape_color))
+                                       .fillColor(ContextCompat.getColor(context!!, R.color.scape_color))
+                                       .strokeWidth(0.5f))
         }
 
         if (scapeRouteSections.isNotEmpty()) {

@@ -10,6 +10,7 @@ import com.google.android.libraries.maps.CameraUpdateFactory
 import com.google.android.libraries.maps.GoogleMap
 import com.google.android.libraries.maps.OnMapReadyCallback
 import com.google.android.libraries.maps.SupportMapFragment
+import com.google.android.libraries.maps.model.CircleOptions
 import com.google.android.libraries.maps.model.MapStyleOptions
 import com.google.android.libraries.maps.model.PolylineOptions
 import com.scape.pixscape.R
@@ -53,17 +54,31 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
         }
 
         for (i in 0 until gpsRouteSections.size) {
-            googleMap?.addPolyline(PolylineOptions().add(gpsRouteSections[i].beginning.toLatLng(),
-                                                        gpsRouteSections[i].end.toLatLng())
-                                          .color(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
-                                          .width(10f))
+            googleMap?.addCircle(CircleOptions().center(gpsRouteSections[i].beginning.toLatLng())
+                                         .radius(2.0)
+                                         .strokeColor(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
+                                         .fillColor(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
+                                         .strokeWidth(0.5f))
+
+            googleMap?.addCircle(CircleOptions().center(gpsRouteSections[i].end.toLatLng())
+                                         .radius(2.0)
+                                         .strokeColor(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
+                                         .fillColor(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
+                                         .strokeWidth(0.5f))
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            googleMap?.addPolyline(PolylineOptions().add(scapeRouteSections[i].beginning.toLatLng(),
-                                                        scapeRouteSections[i].end.toLatLng())
-                                          .color(ContextCompat.getColor(baseContext!!, R.color.scape_color))
-                                          .width(10f))
+            googleMap?.addCircle(CircleOptions().center(scapeRouteSections[i].beginning.toLatLng())
+                                       .radius(2.0)
+                                       .strokeColor(ContextCompat.getColor(baseContext!!, R.color.scape_color))
+                                       .fillColor(ContextCompat.getColor(baseContext!!, R.color.scape_color))
+                                       .strokeWidth(0.5f))
+
+            googleMap?.addCircle(CircleOptions().center(scapeRouteSections[i].end.toLatLng())
+                                       .radius(2.0)
+                                       .strokeColor(ContextCompat.getColor(baseContext!!, R.color.scape_color))
+                                       .fillColor(ContextCompat.getColor(baseContext!!, R.color.scape_color))
+                                       .strokeWidth(0.5f))
         }
 
         if (gpsRouteSections.isNotEmpty()) {
