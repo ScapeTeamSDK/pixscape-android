@@ -56,6 +56,8 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.trackactivityservice.routegpssectionsdatakey"
     }
 
+    // region Private
+
     private fun startTrackService(isContinuousModeEnabled: Boolean) {
         timer.scheduleAtFixedRate(UpdateTimeTask(), 10, 10)
         timer.scheduleAtFixedRate(UpdateNotificationTask(), 1000, 1000)
@@ -96,6 +98,10 @@ class TrackTraceService : Service(), ScapeSessionObserver {
             Log.e("", e.toString())
         }
     }
+
+    // endregion Private
+
+    // region Timer
 
     private inner class UpdateTimeTask : TimerTask() {
         override fun run() {
@@ -165,6 +171,8 @@ class TrackTraceService : Service(), ScapeSessionObserver {
             }
         }
     }
+
+    // endregion Inner Classes
 
     // region Service
 

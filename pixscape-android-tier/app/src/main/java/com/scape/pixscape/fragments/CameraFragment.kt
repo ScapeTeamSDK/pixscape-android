@@ -40,6 +40,7 @@ import com.scape.scapekit.ScapeSessionState
 import com.scape.scapekit.setByteBuffer
 import kotlinx.android.synthetic.main.camera_ui_container.*
 import kotlinx.android.synthetic.main.fragment_camera.*
+import kotlinx.android.synthetic.main.fragment_track_trace.*
 import kotlinx.android.synthetic.main.view_pager_tabs.*
 import java.nio.ByteBuffer
 import java.util.*
@@ -236,6 +237,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         //viewpager custom adapter
         val adapter = ViewPagerAdapter(supportFragmentManager)
+        view_pager.offscreenPageLimit = 1
         view_pager.adapter = adapter
 
         // initialize views pager
@@ -606,6 +608,9 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         when (position) {
             0 -> {
+                view_finder.visibility = View.GONE
+                full_map_view.visibility = View.GONE
+
                 main_view.setBackgroundColor(colorWhite)
                 //while paage scroll to screen 1 positionoffset go up, so alpha go down
                 main_view.alpha = (1 - positionOffset)
@@ -619,6 +624,9 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 card_view_minimap_container.visibility = View.GONE
             }
             1 -> {
+                view_finder.visibility = View.VISIBLE
+                full_map_view.visibility = View.GONE
+
                 main_view.setBackgroundColor(colorWhite)
                 //default posotionOfSet is 0, while page scroll to 2, go up, so aplha up
                 main_view.alpha = positionOffset
@@ -647,6 +655,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 }
             }
             2-> {
+                view_finder.visibility = View.GONE
+
                 // hide all play/pause/stop buttons, timer and minimap when not on main screen
                 play_timer_button.hide()
                 pause_timer_button.hide()
@@ -654,6 +664,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
                 time.visibility = View.GONE
                 card_view_minimap_container.visibility = View.GONE
+
+                full_map_view.visibility = View.VISIBLE
             }
         }
     }

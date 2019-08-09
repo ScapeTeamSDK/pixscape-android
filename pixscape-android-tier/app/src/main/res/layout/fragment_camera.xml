@@ -55,7 +55,8 @@
         app:cameraGestureScrollHorizontal="exposureCorrection"
         app:cameraGestureScrollVertical="none"
         app:cameraMode="picture"
-        app:cameraAutoFocusMarker="@string/cameraview_default_autofocus_marker">
+        app:cameraAutoFocusMarker="@string/cameraview_default_autofocus_marker"
+        android:visibility="gone">
 
     </com.otaliastudios.cameraview.CameraView>
 

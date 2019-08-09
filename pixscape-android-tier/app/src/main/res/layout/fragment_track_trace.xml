@@ -3,6 +3,7 @@
                 xmlns:tools="http://schemas.android.com/tools"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
+                xmlns:app="http://schemas.android.com/apk/res-auto"
                 tools:context=".fragments.TrackTraceFragment">
 
     <FrameLayout
@@ -12,7 +13,10 @@
         <com.google.android.libraries.maps.MapView
             android:id="@+id/full_map_view"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"/>
+            android:layout_height="match_parent"
+            app:liteMode="true"
+            app:mapType="normal"
+            android:visibility="visible"/>
 
     </FrameLayout>
 </RelativeLayout>

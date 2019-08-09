@@ -40,20 +40,24 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     private val trackTraceBroadcastReceiver = object : BroadcastReceiver() {
         @SuppressLint("SetTextI18n")
         override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent!!.action) {
+            val intent = intent ?: return
+
+            when (intent.action) {
                 CameraFragment.BROADCAST_ACTION_GPS_LOCATION   -> {
                     if (activity == null) return
+                    if(context == null) return
+
                     gpsRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_GPS_SECTIONS_DATA_KEY)
-                    context?.let {
-                        fillMap()
-                    }
+
+                    fillMap()
                 }
                 CameraFragment.BROADCAST_ACTION_SCAPE_LOCATION -> {
                     if (activity == null) return
+                    if(context == null) return
+
                     scapeRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_SCAPE_SECTIONS_DATA_KEY)
-                    context?.let {
-                        fillMap()
-                    }
+
+                    fillMap()
                 }
             }
         }
@@ -89,10 +93,14 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     private fun setUpFullMap() {
         if (context == null) return
 
+
         fullMap.isBuildingsEnabled = false
         fullMap.isTrafficEnabled = false
         fullMap.isMyLocationEnabled = false
         fullMap.uiSettings.isZoomControlsEnabled = false
+        fullMap.uiSettings.isCompassEnabled = false
+        fullMap.uiSettings.isMapToolbarEnabled = false
+        fullMap.uiSettings.isMyLocationButtonEnabled = false
         fullMap.setOnMarkerClickListener(this)
 
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
@@ -169,25 +177,25 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     override fun onResume() {
         super.onResume()
 
-        full_map_view.onResume()
+        full_map_view?.onResume()
     }
 
     override fun onPause() {
         super.onPause()
 
-        full_map_view.onPause()
+        full_map_view?.onPause()
     }
 
     override fun onDestroy() {
         super.onDestroy()
 
-        full_map_view.onDestroy()
+        full_map_view?.onDestroy()
     }
 
     override fun onLowMemory() {
         super.onLowMemory()
 
-        full_map_view.onLowMemory()
+        full_map_view?.onLowMemory()
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
@@ -205,9 +213,9 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
 
         try {
-            full_map_view.onCreate(savedInstanceState)
+            full_map_view?.onCreate(savedInstanceState)
 
-            full_map_view.getMapAsync(this)
+            full_map_view?.getMapAsync(this)
         } catch (ex: Resources.NotFoundException) {
             Log.e("Google Map", "Resources\$NotFoundException")
         }
