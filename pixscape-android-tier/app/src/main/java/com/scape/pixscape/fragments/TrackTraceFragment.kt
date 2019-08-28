@@ -93,7 +93,6 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     private fun setUpFullMap() {
         if (context == null) return
 
-
         fullMap.isBuildingsEnabled = false
         fullMap.isTrafficEnabled = false
         fullMap.isMyLocationEnabled = false
@@ -101,10 +100,19 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         fullMap.uiSettings.isCompassEnabled = false
         fullMap.uiSettings.isMapToolbarEnabled = false
         fullMap.uiSettings.isMyLocationButtonEnabled = false
+
         fullMap.setOnMarkerClickListener(this)
 
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
         fullMap.setMapStyle(mapStyleOptions)
+
+        map_mode_switch?.setOnToggledListener { toggleableView, isOn ->
+            if (isOn) {
+                fullMap.mapType = GoogleMap.MAP_TYPE_SATELLITE
+            } else {
+                fullMap.mapType = GoogleMap.MAP_TYPE_NORMAL
+            }
+        }
 
         LocationServices.getFusedLocationProviderClient(activity!!)
                 .lastLocation
@@ -115,8 +123,8 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
                                 .zoom(15.0f)
                                 .build()
                         fullMap.animateCamera(CameraUpdateFactory.newCameraPosition(position))
-            }
-        }
+                    }
+                }
     }
 
     private fun fillMap() {

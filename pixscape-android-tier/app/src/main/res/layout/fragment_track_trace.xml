@@ -14,9 +14,24 @@
             android:id="@+id/full_map_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:liteMode="true"
+            app:liteMode="false"
             app:mapType="normal"
             android:visibility="visible"/>
 
+        <com.github.angads25.toggle.widget.LabeledSwitch
+            android:id="@+id/map_mode_switch"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginRight="15dp"
+            android:layout_marginTop="35dp"
+            android:textSize="10sp"
+            android:layout_gravity="top|right"
+            app:on="false"
+            app:textOff="@string/map_mode_normal"
+            app:textOn="@string/map_mode_satellite"
+            app:colorOff="@color/color_white"
+            app:colorOn="@color/scape_blue"
+            app:colorBorder="@color/scape_blue"/>
     </FrameLayout>
+
 </RelativeLayout>

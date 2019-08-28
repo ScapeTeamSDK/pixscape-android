@@ -12,6 +12,7 @@ import android.widget.ImageView
 import android.widget.Switch
 import androidx.core.content.ContextCompat
 import androidx.viewpager.widget.ViewPager
+import com.github.angads25.toggle.widget.LabeledSwitch
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
@@ -24,7 +25,7 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
     private lateinit var cameraViewCenterTab: ImageView
     private lateinit var historyViewLeftTab: ImageView
     private lateinit var mapViewRightTab: ImageView
-    private lateinit var toggleModeBottomSwitch: Switch
+    private lateinit var toggleModeBottomSwitch: LabeledSwitch
 
     private lateinit var startTimerButton: FloatingActionButton
     private lateinit var pauseTimerButton: FloatingActionButton
@@ -68,7 +69,7 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
 
         //color
         centerColor = ContextCompat.getColor(context, R.color.color_white)
-        sideColor = ContextCompat.getColor(context, R.color.color_grey)
+        sideColor = ContextCompat.getColor(context, R.color.scape_blue)
 
         //method to graduate color
         argbEvaluator = ArgbEvaluator()
@@ -114,17 +115,13 @@ internal class MainTabView : FrameLayout, ViewPager.OnPageChangeListener {
             }
         }
 
-        toggleModeBottomSwitch.setOnCheckedChangeListener { _, isChecked ->
+        toggleModeBottomSwitch.setOnToggledListener() { _, isChecked ->
             when(isChecked) {
                 true -> {
-                    toggleModeBottomSwitch.text = context?.getString(R.string.repeat)
-
                     startTimerButton.show()
                     time?.visibility = View.VISIBLE
                 }
                 false -> {
-                    toggleModeBottomSwitch.text = context?.getString(R.string.single)
-
                     startTimerButton.hide()
                     time?.visibility = View.GONE
                 }

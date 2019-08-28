@@ -42,7 +42,6 @@
         app:cameraPictureSizeMaxWidth="@integer/picture_max_width"
         app:cameraPictureSizeMaxHeight="@integer/picture_max_height"
         app:cameraPictureSizeSmallest="true"
-        app:cameraPictureSizeBiggest="false"
         app:cameraExperimental="true"
         app:cameraEngine="camera1"
         app:cameraPreview="glSurface"
@@ -52,10 +51,9 @@
         app:cameraGestureTap="autoFocus"
         app:cameraGestureLongTap="none"
         app:cameraGesturePinch="none"
-        app:cameraGestureScrollHorizontal="exposureCorrection"
+        app:cameraGestureScrollHorizontal="none"
         app:cameraGestureScrollVertical="none"
         app:cameraMode="picture"
-        app:cameraAutoFocusMarker="@string/cameraview_default_autofocus_marker"
         android:visibility="gone">
 
     </com.otaliastudios.cameraview.CameraView>

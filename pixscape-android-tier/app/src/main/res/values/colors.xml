@@ -21,6 +21,8 @@
     <color name="text_color_black">#111</color>
     <color name="text_color_black_light">#222</color>
 
+    <color name="colorAccent">#00ffae</color>
+
     <array name="dotColors">
         <item>@color/scape_color</item>
         <item>@color/scape_color_dark</item>

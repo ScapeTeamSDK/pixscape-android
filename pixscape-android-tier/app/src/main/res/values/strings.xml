@@ -31,8 +31,11 @@
     <string name="positive_delete">Delete</string>
     <string name="negative_delete">Cancel</string>
 
+    <string name="map_mode_normal">Normal</string>
+    <string name="map_mode_satellite">Satellite</string>
+
     <string name="single">Single</string>
-    <string name="repeat">Repeated</string>
+    <string name="repeat">Repeat</string>
 
     <string-array name="distance_units_array">
         <item>kilometers</item>

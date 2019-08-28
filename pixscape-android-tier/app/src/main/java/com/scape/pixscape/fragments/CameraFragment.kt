@@ -180,7 +180,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         view_camera_center.setOnClickListener {
             if (view_pager.currentItem != 1) {
                 view_pager.currentItem = 1
-            } else if(!view_switch_bottom.isChecked) { // we are not in the continous mode
+            } else if(!view_switch_bottom.isOn) { // we are not in the continous mode
                 startForegroundTrackService(false)
             }
         }
@@ -635,7 +635,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
                 when (timerState) {
                     TimerState.Idle   -> {
-                        if(!view_switch_bottom.isChecked) return
+                        if(!view_switch_bottom.isOn) return
 
                         play_timer_button.show()
 
