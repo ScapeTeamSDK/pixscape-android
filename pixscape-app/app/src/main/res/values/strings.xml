@@ -1,0 +1,87 @@
+<resources>
+    <string name="app_name">Pixscape</string>
+
+    <string name="title_home">Home</string>
+    <string name="notification_title">Tracking</string>
+    <string name="distance">Distance</string>
+    <string name="zero_dot">0.00</string>
+    <string name="zero_colon">0:00</string>
+    <string name="rate">Pace</string>
+    <string name="icon_content_description">Icon</string>
+    <string name="time">Time</string>
+    <string name="speed">Avg. speed</string>
+    <string name="pace">Avg. pace</string>
+    <string name="front_pace">PACE</string>
+    <string name="front_distance">DISTANCE</string>
+    <string name="settings_profile_text">Profile</string>
+    <string name="profile_kilometers_abbv">km</string>
+    <string name="profile_time_abbv">h</string>
+    <string name="traces">Traces</string>
+    <string name="language">Language</string>
+    <string name="status">Status</string>
+    <string name="zero">0</string>
+    <string name="applicaton">Application</string>
+    <string name="author">Scape</string>
+    <string name="icon_authors">Icon authors</string>
+    <string name="icon_authors_names">Scape</string>
+    <string name="profile_cancel">Cancel</string>
+    <string name="waiting">Just a moment…</string>
+    <string name="delete_trace_title">Delete GPS Trace</string>
+    <string name="confirm_delete">Are you sure you want to delete this trace?</string>
+    <string name="positive_delete">Delete</string>
+    <string name="negative_delete">Cancel</string>
+
+    <string name="map_mode_normal">Normal</string>
+    <string name="map_mode_satellite">Satellite</string>
+
+    <string name="single">Single</string>
+    <string name="repeat">Repeat</string>
+
+    <string-array name="distance_units_array">
+        <item>kilometers</item>
+        <item>meters</item>
+    </string-array>
+    <string-array name="time_units_array">
+        <item>week</item>
+        <item>month</item>
+    </string-array>
+
+
+    <string name="preference_file_key" translatable="false" templateMergeStrategy="preserve">
+        com.scape.pixscape.PREFERENCE_FILE_KEY
+    </string>
+    <string name="timer_state" translatable="false" templateMergeStrategy="preserve">
+        com.scape.pixscape.timerstate
+    </string>
+    <string name="preference_weight" translatable="false" templateMergeStrategy="preserve">
+        com.scape.pixscape.weight
+    </string>
+    <string name="preference_height" translatable="false" templateMergeStrategy="preserve">
+        com.scape.pixscape.height
+    </string>
+    <string name="preference_gender" translatable="false" templateMergeStrategy="preserve">
+        com.scape.pixscape.gender
+    </string>
+    <string name="preference_first_launch" translatable="false" templateMergeStrategy="preserve">
+        com.scape.pixscape.firstlaunch
+    </string>
+    <string name="preference_distance" translatable="false" templateMergeStrategy="preserve">
+        com.scape.pixscape.distance
+    </string>
+    <string name="preference_time_unit" translatable="false" templateMergeStrategy="preserve">
+        com.scape.pixscape.timeunit
+    </string>
+
+    <!-- permissions -->
+    <string name="permission_missing_camera">You are not authorized to use camera, please launch the app again and accept permissions.</string>
+    <string name="permission_missing_location">You are not authorized to use the device\'s location, please launch the app again and accept permissions.</string>
+    <string name="permission_missing_storage">You are not authorized to use device\'s storage, please launch the app again and accept permissions.</string>
+
+    <!-- empty gpsTrace history -->
+    <string name="empty_trace_title">Nothing here.</string>
+    <string name="empty_trace_message">You do not have any traces yet.</string>
+
+    <string name="cameraview_default_autofocus_marker">com.otaliastudios.cameraview.markers.DefaultAutoFocusMarker</string>
+    <string name="my_traces">My Traces</string>
+
+</resources>

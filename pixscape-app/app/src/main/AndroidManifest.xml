@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools"
+          package="com.scape.pixscape"
+          android:installLocation="auto">
+
+    <!--For play store-->
+    <uses-feature android:name="android.hardware.camera" android:required="true"/>
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="true" />
+
+    <!-- Lock portrait mode-->
+    <uses-feature android:name="android.hardware.screen.portrait" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+
+    <application
+        android:name=".PixscapeApplication"
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/PixscapeTheme"
+        tools:ignore="GoogleAppIndexingWarning">
+
+        <uses-library android:name="org.apache.http.legacy" android:required="false" />
+        <uses-library android:name="com.google.android.maps" />
+
+        <!-- Declare notch support -->
+        <meta-data android:name="android.notch_support" android:value="true"/>
+        <!--google maps key-->
+        <meta-data android:name="com.google.android.geo.API_KEY" android:value="@string/google_maps_key"/>
+        <!--google play services-->
+        <meta-data android:name="com.google.android.gms.version" android:value="@integer/google_play_services_version" />
+
+        <activity android:name=".activities.TraceDetailsActivity"
+                  android:screenOrientation="portrait">
+        </activity>
+
+        <activity android:name=".activities.MainActivity"
+                  android:label="@string/app_name"
+                  android:launchMode="singleTask"
+                  android:screenOrientation="portrait"
+                  android:theme="@style/PixscapeTheme">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service android:name=".services.TrackTraceService">
+        </service>
+    </application>
+
+</manifest>

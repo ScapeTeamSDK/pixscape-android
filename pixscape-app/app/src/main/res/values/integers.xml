@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <integer name="picture_min_height">700</integer>
+    <integer name="picture_min_width">1000</integer>
+    <integer name="picture_max_height">1080</integer>
+    <integer name="picture_max_width">1920</integer>
+</resources>

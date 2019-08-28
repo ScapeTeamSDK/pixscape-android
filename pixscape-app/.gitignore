@@ -54,7 +54,5 @@ google-services.json
 .Trashes
 ehthumbs.db
 Thumbs.db
-gradlew
-gradlew.bat
-gradle.properties
-gradle-wrapper.jar
+.idea
+app.iml

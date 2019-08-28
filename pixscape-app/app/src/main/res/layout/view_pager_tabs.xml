@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="224dp"
+    tools:background="#3c3c3b"
+    android:clipToPadding="false"
+    android:id="@+id/view_pager_container"
+    tools:layout_gravity="bottom">
+
+    <Chronometer
+        android:id="@+id/time"
+        android:textColor="@color/color_white"
+        android:layout_width="120dp"
+        android:layout_height="wrap_content"
+        android:focusable="false"
+        android:layout_gravity="top|center"
+        android:textAlignment="center"
+        android:textSize="@dimen/chrono_text_size"
+        android:visibility="gone"/>
+
+
+    <com.agrawalsuneet.dotsloader.loaders.LazyLoader
+        android:id="@+id/dots_view"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center"
+        app:lazyloader_animDur="800"
+        app:lazyloader_dotsDist="10dp"
+        app:lazyloader_dotsRadius="10dp"
+        app:lazyloader_firstDelayDur="150"
+        app:lazyloader_firstDotColor="@color/scape_color"
+        app:lazyloader_interpolator="@android:anim/decelerate_interpolator"
+        app:lazyloader_secondDelayDur="300"
+        app:lazyloader_secondDotColor="@color/scape_blue"
+        app:lazyloader_thirdDotColor="@color/scape_black"
+        android:visibility="gone"/>
+
+    <ImageView
+        android:id="@+id/view_camera_center"
+        android:layout_width="88dp"
+        android:layout_height="88dp"
+        android:layout_gravity="center|bottom"
+        android:layout_marginBottom="66dp"
+        app:srcCompat="@drawable/circle_image" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/play_timer_button"
+        android:layout_width="66dp"
+        android:layout_height="66dp"
+        app:fabCustomSize="@dimen/fab_size"
+        app:backgroundTint="@color/fab_color_go"
+        android:layout_marginBottom="77dp"
+        android:src="@drawable/ic_play_arrow"
+        android:scaleType="center"
+        android:layout_gravity="center|bottom"
+        android:visibility="gone"/>
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/pause_timer_button"
+        android:layout_width="66dp"
+        android:layout_height="66dp"
+        app:fabCustomSize="@dimen/fab_size"
+        app:backgroundTint="@color/fab_color_pause"
+        android:layout_marginBottom="77dp"
+        android:src="@drawable/ic_pause"
+        android:scaleType="center"
+        android:layout_gravity="center|bottom"
+        android:visibility="gone"/>
+
+    <ImageView
+        android:id="@+id/stop_timer_button"
+        android:layout_width="55dp"
+        android:layout_height="55dp"
+        app:backgroundTint="@color/fab_color_stop"
+        android:layout_marginBottom="8dp"
+        android:src="@drawable/ic_stop"
+        android:scaleType="center"
+        android:layout_gravity="center|bottom"
+        android:visibility="gone"/>
+
+    <ImageView
+        android:id="@+id/view_history_left"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="left|bottom"
+        android:layout_marginLeft="24dp"
+        android:layout_marginBottom="16dp"
+        app:srcCompat="@drawable/history_list" />
+
+    <ImageView
+        android:id="@+id/view_map_right"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="right|bottom"
+        android:layout_marginRight="24dp"
+        android:layout_marginBottom="16dp"
+        app:srcCompat="@drawable/map_trace" />
+
+    <com.github.angads25.toggle.widget.LabeledSwitch
+        android:id="@+id/view_switch_bottom"
+        android:layout_gravity="center|bottom"
+        android:layout_marginBottom="20dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="10sp"
+        app:on="false"
+        app:textOff="@string/single"
+        app:textOn="@string/repeat"
+        app:colorOff="@color/color_white"
+        app:colorOn="@color/scape_blue"
+        app:colorBorder="@color/scape_blue"/>
+
+    <ImageView
+        android:id="@+id/view_circle_invisible_bottom"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:layout_gravity="center|bottom"
+        android:layout_marginBottom="20dp"
+        app:srcCompat="@drawable/small_circle_image"
+        android:visibility="invisible"/>
+
+    <View
+        android:id="@+id/view_tab_indicator"
+        android:layout_width="48dp"
+        android:layout_height="4dp"
+        android:layout_gravity="center|bottom"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/indicator_bg" />
+
+</FrameLayout>
