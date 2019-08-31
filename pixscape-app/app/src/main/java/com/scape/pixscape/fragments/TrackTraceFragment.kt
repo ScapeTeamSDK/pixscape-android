@@ -139,6 +139,9 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     private fun fillMap() {
         try {
             fullMap.clear()
+
+            val layer = KmlLayer(fullMap, R.raw.parking_areas, context)
+            layer.addLayerToMap()
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
             return
