@@ -172,6 +172,14 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
         googleMap?.isTrafficEnabled = false
         googleMap?.isBuildingsEnabled = false
 
+        map_mode_switch?.setOnToggledListener { toggleableView, isOn ->
+            if (isOn) {
+                googleMap?.mapType = GoogleMap.MAP_TYPE_SATELLITE
+            } else {
+                googleMap?.mapType = GoogleMap.MAP_TYPE_NORMAL
+            }
+        }
+
         fillMap()
     }
 
