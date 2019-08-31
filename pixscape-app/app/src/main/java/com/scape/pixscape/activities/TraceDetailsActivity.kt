@@ -2,17 +2,20 @@ package com.scape.pixscape.activities
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.res.ResourcesCompat
+import androidx.core.graphics.drawable.DrawableCompat
 import com.google.android.libraries.maps.CameraUpdateFactory
 import com.google.android.libraries.maps.GoogleMap
 import com.google.android.libraries.maps.OnMapReadyCallback
 import com.google.android.libraries.maps.SupportMapFragment
-import com.google.android.libraries.maps.model.CircleOptions
-import com.google.android.libraries.maps.model.MapStyleOptions
-import com.google.android.libraries.maps.model.PolylineOptions
+import com.google.android.libraries.maps.model.*
+import com.google.maps.android.data.kml.KmlLayer
 import com.scape.pixscape.R
 import com.scape.pixscape.fragments.CameraFragment
 import com.scape.pixscape.models.dto.GpsTrace
@@ -42,43 +45,49 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
         mapFragment.getMapAsync(this)
     }
 
+    private fun vectorToBitmap(id: Int, color: Int) : BitmapDescriptor {
+        val vectorDrawable = ResourcesCompat.getDrawable(resources, id, null)
+        val bitmap = Bitmap.createBitmap(vectorDrawable!!.intrinsicWidth,
+                                         vectorDrawable.intrinsicHeight,
+                                         Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
+        DrawableCompat.setTint(vectorDrawable, color)
+        vectorDrawable.draw(canvas)
+        return BitmapDescriptorFactory.fromBitmap(bitmap)
+    }
+
+    private fun placeCircleOnMap(location: LatLng, color: Int) {
+        val markerOptions = MarkerOptions().apply {
+            position(location)
+            val resourceColor = resources.getColor(color)
+            icon(vectorToBitmap(R.drawable.circle_marker, resourceColor))
+        }
+        googleMap?.addMarker(markerOptions)
+    }
+
     private fun fillMap() {
         try {
             googleMap?.clear()
 
             val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json)
             googleMap?.setMapStyle(mapStyleOptions)
+
+            val layer = KmlLayer(googleMap, R.raw.parking_areas, this)
+            layer.addLayerToMap()
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google map", "fillMap() invoked with uninitialized googleMap")
             return
         }
 
         for (i in 0 until gpsRouteSections.size) {
-            googleMap?.addCircle(CircleOptions().center(gpsRouteSections[i].beginning.toLatLng())
-                                         .radius(2.0)
-                                         .strokeColor(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
-                                         .fillColor(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
-                                         .strokeWidth(0.5f))
-
-            googleMap?.addCircle(CircleOptions().center(gpsRouteSections[i].end.toLatLng())
-                                         .radius(2.0)
-                                         .strokeColor(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
-                                         .fillColor(ContextCompat.getColor(baseContext!!, R.color.text_color_black))
-                                         .strokeWidth(0.5f))
+            placeCircleOnMap(gpsRouteSections[i].beginning.toLatLng(), R.color.color_primary_dark)
+            placeCircleOnMap(gpsRouteSections[i].end.toLatLng(), R.color.color_primary_dark)
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            googleMap?.addCircle(CircleOptions().center(scapeRouteSections[i].beginning.toLatLng())
-                                       .radius(2.0)
-                                       .strokeColor(ContextCompat.getColor(baseContext!!, R.color.scape_color))
-                                       .fillColor(ContextCompat.getColor(baseContext!!, R.color.scape_color))
-                                       .strokeWidth(0.5f))
-
-            googleMap?.addCircle(CircleOptions().center(scapeRouteSections[i].end.toLatLng())
-                                       .radius(2.0)
-                                       .strokeColor(ContextCompat.getColor(baseContext!!, R.color.scape_color))
-                                       .fillColor(ContextCompat.getColor(baseContext!!, R.color.scape_color))
-                                       .strokeWidth(0.5f))
+            placeCircleOnMap(scapeRouteSections[i].beginning.toLatLng(), R.color.scape_color)
+            placeCircleOnMap(scapeRouteSections[i].end.toLatLng(), R.color.scape_color)
         }
 
         if (gpsRouteSections.isNotEmpty()) {
