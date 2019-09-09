@@ -6,28 +6,31 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.res.Resources
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.location.Location
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.core.content.ContextCompat
-import androidx.core.content.res.ResourcesCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import com.google.android.gms.location.LocationServices
 import com.google.android.libraries.maps.CameraUpdateFactory
 import com.google.android.libraries.maps.GoogleMap
 import com.google.android.libraries.maps.OnMapReadyCallback
-import com.google.android.libraries.maps.model.*
+import com.google.android.libraries.maps.model.CameraPosition
+import com.google.android.libraries.maps.model.LatLng
+import com.google.android.libraries.maps.model.MapStyleOptions
+import com.google.android.libraries.maps.model.Marker
 import com.google.maps.android.data.kml.KmlLayer
 import com.scape.pixscape.R
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
+import com.scape.pixscape.utils.downloadKmlFileAsync
+import com.scape.pixscape.utils.placeMarker
 import kotlinx.android.synthetic.main.fragment_track_trace.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
@@ -66,54 +69,30 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
 
     // region Private
 
-    private fun vectorToBitmap(id: Int, color: Int) : BitmapDescriptor {
-        val vectorDrawable = ResourcesCompat.getDrawable(resources, id, null)
-        val bitmap = Bitmap.createBitmap(vectorDrawable!!.intrinsicWidth,
-                                         vectorDrawable.intrinsicHeight,
-                                         Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
-        DrawableCompat.setTint(vectorDrawable, color)
-        vectorDrawable.draw(canvas)
-        return BitmapDescriptorFactory.fromBitmap(bitmap)
-    }
-
-    private fun placeMarkerOnMap(location: LatLng, color: Int) {
-        val markerOptions = MarkerOptions().position(location)
-        markerOptions.icon(vectorToBitmap(R.drawable.gps_user_location, resources.getColor(color)))
-        fullMap.addMarker(markerOptions)
-
-        placeCircleOnMap(location, color)
-    }
-
-    private fun placeCircleOnMap(location: LatLng, color: Int) {
-        val markerOptions = MarkerOptions().apply {
-            position(location)
-            val resourceColor = resources.getColor(color)
-            icon(vectorToBitmap(R.drawable.circle_marker, resourceColor))
-        }
-        fullMap.addMarker(markerOptions)
-    }
-
     @SuppressLint("MissingPermission")
     private fun setUpFullMap() {
         if (context == null) return
 
-        fullMap.isBuildingsEnabled = false
-        fullMap.isTrafficEnabled = false
-        fullMap.isMyLocationEnabled = false
-        fullMap.uiSettings.isZoomControlsEnabled = false
-        fullMap.uiSettings.isCompassEnabled = false
-        fullMap.uiSettings.isMapToolbarEnabled = false
-        fullMap.uiSettings.isMyLocationButtonEnabled = false
-
         fullMap.setOnMarkerClickListener(this)
+        fullMap.apply {
+            isBuildingsEnabled = false
+            isTrafficEnabled = false
+            isMyLocationEnabled = false
+        }
+        fullMap.uiSettings.apply {
+            isZoomControlsEnabled = false
+            isCompassEnabled = false
+            isMapToolbarEnabled = false
+            isMyLocationButtonEnabled = false
+        }
 
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
         fullMap.setMapStyle(mapStyleOptions)
 
-        val layer = KmlLayer(fullMap, R.raw.parking_areas, context)
-        layer.addLayerToMap()
+        GlobalScope.launch(Dispatchers.Main) {
+            val layer = KmlLayer(fullMap, downloadKmlFileAsync().await(), context)
+            layer.addLayerToMap()
+        }
 
         map_mode_switch?.setOnToggledListener { toggleableView, isOn ->
             if (isOn) {
@@ -140,32 +119,52 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         try {
             fullMap.clear()
 
-            val layer = KmlLayer(fullMap, R.raw.parking_areas, context)
-            layer.addLayerToMap()
+            GlobalScope.launch(Dispatchers.Main) {
+                val layer = KmlLayer(fullMap, downloadKmlFileAsync().await(), context)
+                layer.addLayerToMap()
+            }
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
             return
         }
 
         for (i in 0 until gpsRouteSections.size) {
-            placeCircleOnMap(gpsRouteSections[i].beginning.toLatLng(), R.color.color_primary_dark)
-            placeCircleOnMap(gpsRouteSections[i].end.toLatLng(), R.color.color_primary_dark)
+            fullMap.placeMarker(gpsRouteSections[i].beginning.toLatLng(),
+                                resources,
+                                R.drawable.circle_marker,
+                                R.color.color_primary_dark)
+            fullMap.placeMarker(gpsRouteSections[i].end.toLatLng(),
+                                resources,
+                                R.drawable.circle_marker,
+                                R.color.color_primary_dark)
         }
 
         if (gpsRouteSections.isNotEmpty()) {
-            placeMarkerOnMap(gpsRouteSections.last().end.toLatLng(), R.color.color_primary_dark)
+            fullMap.placeMarker(gpsRouteSections.last().end.toLatLng(),
+                                resources,
+                                R.drawable.gps_user_location,
+                                R.color.color_primary_dark)
 
             fullMap.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
                                                                     18f))
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            placeCircleOnMap(scapeRouteSections[i].beginning.toLatLng(), R.color.scape_color)
-            placeCircleOnMap(scapeRouteSections[i].end.toLatLng(), R.color.scape_color)
+            fullMap.placeMarker(scapeRouteSections[i].beginning.toLatLng(),
+                                resources,
+                                R.drawable.circle_marker,
+                                R.color.scape_color)
+            fullMap.placeMarker(scapeRouteSections[i].end.toLatLng(),
+                                resources,
+                                R.drawable.circle_marker,
+                                R.color.scape_color)
         }
 
         if (scapeRouteSections.isNotEmpty()) {
-            placeMarkerOnMap(scapeRouteSections.last().end.toLatLng(), R.color.scape_color)
+            fullMap.placeMarker(scapeRouteSections.last().end.toLatLng(),
+                                resources,
+                                R.drawable.gps_user_location,
+                                R.color.scape_color)
 
             fullMap.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
                                                                     18f))
@@ -208,9 +207,10 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val intentFilter = IntentFilter()
-        intentFilter.addAction(CameraFragment.BROADCAST_ACTION_GPS_LOCATION)
-        intentFilter.addAction(CameraFragment.BROADCAST_ACTION_SCAPE_LOCATION)
+        val intentFilter = IntentFilter().apply {
+            addAction(CameraFragment.BROADCAST_ACTION_GPS_LOCATION)
+            addAction(CameraFragment.BROADCAST_ACTION_SCAPE_LOCATION)
+        }
 
         activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
 

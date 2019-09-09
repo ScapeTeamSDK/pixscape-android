@@ -361,6 +361,10 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         sendBroadcast(intent)
     }
 
+    override fun onScapeCoverageUpdated(p0: ScapeSession?, p1: Boolean) {
+
+    }
+
     override fun onDeviceLocationMeasurementsUpdated(session: ScapeSession?, measurements: LocationMeasurements?) {
         if(isContinuousModeEnabled) {
             onDeviceLocationUpdatedContinuousMode(measurements)

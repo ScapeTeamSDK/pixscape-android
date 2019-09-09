@@ -2,8 +2,6 @@ package com.scape.pixscape.fragments
 
 import android.annotation.SuppressLint
 import android.content.*
-import android.graphics.Bitmap
-import android.graphics.Canvas
 import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
@@ -15,8 +13,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.RelativeLayout
 import androidx.core.content.ContextCompat
-import androidx.core.content.res.ResourcesCompat
-import androidx.core.graphics.drawable.DrawableCompat
 import androidx.fragment.app.Fragment
 import androidx.viewpager.widget.ViewPager
 import com.exlyo.gmfmt.FloatingMarkerTitlesOverlay
@@ -36,6 +32,8 @@ import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
 import com.scape.pixscape.utils.CameraIntrinsics
+import com.scape.pixscape.utils.downloadKmlFileAsync
+import com.scape.pixscape.utils.placeMarker
 import com.scape.pixscape.utils.showSnackbar
 import com.scape.scapekit.ScapeSessionState
 import com.scape.scapekit.setByteBuffer
@@ -43,6 +41,9 @@ import kotlinx.android.synthetic.main.camera_ui_container.*
 import kotlinx.android.synthetic.main.fragment_camera.*
 import kotlinx.android.synthetic.main.fragment_track_trace.*
 import kotlinx.android.synthetic.main.view_pager_tabs.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.ArrayList
@@ -113,7 +114,10 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                                                            intrinsics.focalLengthY,
                                                            intrinsics.principalPointX,
                                                            intrinsics.principalPointY)
-            scapeClient?.scapeSession?.setByteBuffer(luma, width, height)
+            val byteBuffer = luma
+            if(byteBuffer != null) {
+                scapeClient?.scapeSession?.setByteBuffer(byteBuffer, width, height)
+            }
         }
     }
 
@@ -260,11 +264,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         CameraFragment.isContinuousModeEnabled = isContinuousModeEnabled
 
-        val intentFilter = IntentFilter()
-        intentFilter.addAction(BROADCAST_ACTION_GPS_LOCATION)
-        intentFilter.addAction(BROADCAST_ACTION_SCAPE_LOCATION)
-        intentFilter.addAction(BROADCAST_ACTION_TIME)
-        intentFilter.addAction(BROADCAST_ACTION_STOP_TIMER)
+        val intentFilter = IntentFilter().apply {
+            addAction(BROADCAST_ACTION_GPS_LOCATION)
+            addAction(BROADCAST_ACTION_SCAPE_LOCATION)
+            addAction(BROADCAST_ACTION_TIME)
+            addAction(BROADCAST_ACTION_STOP_TIMER)
+        }
 
         activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
 
@@ -352,64 +357,32 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
     }
 
-    private fun vectorToBitmap(id: Int, color: Int) : BitmapDescriptor {
-        val vectorDrawable = ResourcesCompat.getDrawable(resources, id, null)
-        val bitmap = Bitmap.createBitmap(vectorDrawable!!.intrinsicWidth,
-                                         vectorDrawable.intrinsicHeight,
-                                         Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        vectorDrawable.setBounds(0, 0, canvas.width, canvas.height)
-        DrawableCompat.setTint(vectorDrawable, color)
-        vectorDrawable.draw(canvas)
-        return BitmapDescriptorFactory.fromBitmap(bitmap)
-    }
-
-    private fun placeMarkerOnMap(location: LatLng, color: Int, title: String) {
-        val markerInfo = MarkerInfo(location, title, Color.BLACK)
-
-        val resourceColor = resources.getColor(color)
-
-        val markerOptions = MarkerOptions().apply {
-            position(location)
-            icon(vectorToBitmap(R.drawable.gps_user_location, resourceColor))
-        }
-        miniMap?.addMarker(markerOptions)
-        floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
-                                               markerInfo)
-
-        placeCircleOnMap(location, color)
-    }
-
-    private fun placeCircleOnMap(location: LatLng, color: Int) {
-        val markerOptions = MarkerOptions().apply {
-            position(location)
-            val resourceColor = resources.getColor(color)
-            icon(vectorToBitmap(R.drawable.circle_marker, resourceColor))
-        }
-        miniMap?.addMarker(markerOptions)
-    }
-
     @SuppressLint("MissingPermission")
     private fun setupMiniMap() {
         floatingMarkerTitlesOverlay?.setSource(miniMap)
 
         miniMapView?.isClickable = false
 
-        miniMap?.uiSettings?.isZoomControlsEnabled = false
-        miniMap?.uiSettings?.isCompassEnabled = false
-        miniMap?.uiSettings?.isZoomGesturesEnabled = false
-        miniMap?.uiSettings?.isScrollGesturesEnabled = false
-        miniMap?.uiSettings?.isMapToolbarEnabled = false
-        miniMap?.isMyLocationEnabled = false
-        miniMap?.isTrafficEnabled = false
-
         miniMap?.setOnMarkerClickListener(this)
+        miniMap?.apply {
+            isMyLocationEnabled = false
+            isTrafficEnabled = false
+        }
+        miniMap?.uiSettings?.apply {
+            isZoomControlsEnabled = false
+            isCompassEnabled = false
+            isZoomGesturesEnabled = false
+            isScrollGesturesEnabled = false
+            isMapToolbarEnabled = false
+        }
 
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
         miniMap?.setMapStyle(mapStyleOptions)
 
-        val layer = KmlLayer(miniMap, R.raw.parking_areas, context)
-        layer.addLayerToMap()
+        GlobalScope.launch(Dispatchers.Main) {
+            val layer = KmlLayer(miniMap, downloadKmlFileAsync().await(), context)
+            layer.addLayerToMap()
+        }
 
         LocationServices.getFusedLocationProviderClient(activity!!)
                 .lastLocation
@@ -425,10 +398,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
 
         val waterMark: View = miniMapView?.findViewWithTag("GoogleWatermark") ?: return
-        waterMark.scaleX = 0.5f
-        waterMark.scaleY = 0.5f
-        waterMark.translationX = -30f
-        waterMark.translationY = 15f
+        waterMark.apply {
+            scaleX = 0.5f
+            scaleY = 0.5f
+            translationX = -30f
+            translationY = 15f
+        }
     }
 
     private fun fillMap() {
@@ -441,24 +416,52 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
 
         for (i in 0 until gpsRouteSections.size) {
-            placeCircleOnMap(gpsRouteSections[i].beginning.toLatLng(), R.color.color_primary_dark)
-            placeCircleOnMap(gpsRouteSections[i].end.toLatLng(), R.color.color_primary_dark)
+            miniMap?.placeMarker(gpsRouteSections[i].beginning.toLatLng(),
+                                 resources,
+                                 R.drawable.circle_marker,
+                                 R.color.color_primary_dark)
+            miniMap?.placeMarker(gpsRouteSections[i].end.toLatLng(),
+                                 resources,
+                                 R.drawable.circle_marker,
+                                 R.color.color_primary_dark)
         }
 
         if (gpsRouteSections.isNotEmpty()) {
-            placeMarkerOnMap(gpsRouteSections.last().end.toLatLng(), R.color.color_primary_dark, "GPS")
+            miniMap?.placeMarker(gpsRouteSections.last().end.toLatLng(),
+                                resources,
+                                R.drawable.gps_user_location,
+                                R.color.color_primary_dark)
+
+            floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
+                                                   MarkerInfo(gpsRouteSections.last().end.toLatLng(),
+                                                              "GPS",
+                                                              Color.BLACK))
 
             miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
                                                                      18f))
         }
 
         for (i in 0 until scapeRouteSections.size) {
-            placeCircleOnMap(scapeRouteSections[i].beginning.toLatLng(), R.color.scape_color)
-            placeCircleOnMap(scapeRouteSections[i].end.toLatLng(), R.color.scape_color)
+            miniMap?.placeMarker(scapeRouteSections[i].beginning.toLatLng(),
+                                resources,
+                                R.drawable.circle_marker,
+                                R.color.scape_color)
+            miniMap?.placeMarker(scapeRouteSections[i].end.toLatLng(),
+                                resources,
+                                R.drawable.circle_marker,
+                                R.color.scape_color)
         }
 
         if (scapeRouteSections.isNotEmpty()) {
-            placeMarkerOnMap(scapeRouteSections.last().end.toLatLng(), R.color.scape_color, "SCAPE")
+            miniMap?.placeMarker(scapeRouteSections.last().end.toLatLng(),
+                                resources,
+                                R.drawable.gps_user_location,
+                                R.color.scape_color)
+
+            floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
+                                                   MarkerInfo(scapeRouteSections.last().end.toLatLng(),
+                                                              "SCAPE",
+                                                              Color.BLACK))
 
             miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
                                                                      18f))
