@@ -38,7 +38,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     private var sharedPref: SharedPreferences? = null
     private lateinit var context: Context
 
-    private var scapeClient: ScapeClient? = null
+    private var scapeClient: CoreScapeClient? = null
     private var gpsLocations: MutableList<RouteSection> = ArrayList()
     private var scapeLocations: MutableList<RouteSection> = ArrayList()
     private var lastGpsLocation: LatLng? = null
