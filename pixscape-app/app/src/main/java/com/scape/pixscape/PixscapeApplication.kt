@@ -8,8 +8,8 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import com.scape.scapekit.LogLevel
 import com.scape.scapekit.LogOutput
-import com.scape.scapekit.Scape
-import com.scape.scapekit.ScapeClient
+import com.scape.scapekit.CoreScape
+import com.scape.scapekit.CoreScapeClient
 import java.util.*
 
 class PixscapeApplication: Application() {
@@ -25,14 +25,14 @@ class PixscapeApplication: Application() {
             get() = PixscapeApplicationHolder.INSTANCE
     }
 
-    var scapeClient: ScapeClient? = null
+    var scapeClient: CoreScapeClient? = null
 
     override fun onCreate() {
         super.onCreate()
 
         PixscapeApplicationHolder.INSTANCE = this
 
-        scapeClient = Scape.scapeClientBuilder
+        scapeClient = CoreScape.coreScapeClientBuilder
                 .withApiKey(BuildConfig.SCAPEKIT_API_KEY)
                 .withContext(applicationContext)
                 .withDebugSupport(true)
