@@ -59,7 +59,8 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".services.TrackTraceService">
+        <service android:name=".services.TrackTraceService"
+            android:description="@string/app_name">
         </service>
     </application>
 

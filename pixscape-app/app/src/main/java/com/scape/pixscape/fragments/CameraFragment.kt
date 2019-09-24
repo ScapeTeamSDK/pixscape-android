@@ -19,15 +19,18 @@ import com.exlyo.gmfmt.FloatingMarkerTitlesOverlay
 import com.exlyo.gmfmt.MarkerInfo
 import com.google.android.gms.location.LocationServices
 import com.google.android.libraries.maps.*
-import com.google.android.libraries.maps.model.*
+import com.google.android.libraries.maps.model.CameraPosition
+import com.google.android.libraries.maps.model.LatLng
+import com.google.android.libraries.maps.model.MapStyleOptions
+import com.google.android.libraries.maps.model.Marker
 import com.google.maps.android.data.kml.KmlLayer
 import com.otaliastudios.cameraview.CameraView
 import com.otaliastudios.cameraview.frame.FrameProcessor
-import com.scape.pixscape.PixscapeApplication
 import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
 import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.ViewPagerAdapter
+import com.scape.pixscape.manager.ScapeClientManager
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
@@ -109,7 +112,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         if (intrinsics != null) {
             //Log.e("frameProcessor", "$intrinsics $width $height")
 
-            val scapeClient = PixscapeApplication.sharedInstance?.scapeClient
+            val scapeClient = ScapeClientManager.sharedInstance(context!!)?.scapeClient
+
             scapeClient?.scapeSession?.setCameraIntrinsics(intrinsics.focalLengthX,
                                                            intrinsics.focalLengthY,
                                                            intrinsics.principalPointX,
@@ -186,7 +190,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             if (view_pager.currentItem != 1) {
                 view_pager.currentItem = 1
             } else if(!view_switch_bottom.isOn) { // we are not in the continous mode
-                startForegroundTrackService(false)
+
+                startSingleShotLocalization()
             }
         }
 
@@ -200,7 +205,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
                 view_switch_bottom?.visibility = View.GONE
 
-                startForegroundTrackService(true)
+                startForegroundTrackService()
 
             } else if(timerState == TimerState.Paused) {
                 timerState = TimerState.Running
@@ -255,15 +260,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         view_pager.addOnPageChangeListener(this)
     }
 
-    private fun startForegroundTrackService(isContinuousModeEnabled: Boolean) {
-        if(!isContinuousModeEnabled) {
-            view_switch_bottom?.visibility = View.GONE
-            dots_view?.visibility = View.VISIBLE
-            container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, 3000)
-        }
-
-        CameraFragment.isContinuousModeEnabled = isContinuousModeEnabled
-
+    private fun registerBroadcastReveiver() {
         val intentFilter = IntentFilter().apply {
             addAction(BROADCAST_ACTION_GPS_LOCATION)
             addAction(BROADCAST_ACTION_SCAPE_LOCATION)
@@ -271,11 +268,30 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             addAction(BROADCAST_ACTION_STOP_TIMER)
         }
 
-        activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
+        activity?.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
+    }
+
+    private fun startSingleShotLocalization() {
+        view_switch_bottom?.visibility = View.GONE
+        dots_view?.visibility = View.VISIBLE
+        container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, 3000)
+
+        registerBroadcastReveiver()
+
+        ScapeClientManager.sharedInstance(activity!!)?.getMeasurements()
+
+        activity?.let { it1 -> ScapeClientManager.sharedInstance(it1)?.getMeasurements() }
+    }
+
+    private fun startForegroundTrackService() {
+        isContinuousModeEnabled = true
+
+        registerBroadcastReveiver()
 
         val intent = Intent(context,
                             TrackTraceService::class.java).putExtra(CONTINUOUS_MODE,
                                                                     isContinuousModeEnabled)
+
         ContextCompat.startForegroundService(context!!, intent)
     }
 
@@ -496,7 +512,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         super.onCreate(savedInstanceState)
 
         // start client here to ensure that we have GPS updates as soon as possible
-        PixscapeApplication.sharedInstance?.scapeClient?.start({}, { error -> Log.e("CameraFragment", error)})
+        ScapeClientManager.sharedInstance(context!!)?.scapeClient?.start({}, { error -> Log.e("CameraFragment", error)})
     }
 
     override fun onResume() {
@@ -533,7 +549,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     override fun onDestroyView() {
         super.onDestroyView()
 
-        PixscapeApplication.sharedInstance?.scapeClient?.stop({}, {})
+        ScapeClientManager.sharedInstance(activity!!)?.scapeClient?.stop({}, {})
 
         viewFinder.removeFrameProcessor(frameProcessor)
 
@@ -547,7 +563,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         // clean up viewpager
         main_tab_view.resetViewPager(view_pager)
         view_pager.removeOnPageChangeListener(this)
-        view_pager.adapter = null
+        //view_pager.adapter = null
 
         with(sharedPref!!.edit()) {
             putInt(getString(R.string.timer_state), timerState.ordinal)
