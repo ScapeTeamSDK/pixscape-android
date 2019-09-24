@@ -15,15 +15,14 @@ import android.os.Parcelable
 import android.util.Log
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
-import com.scape.pixscape.PixscapeApplication
 import com.scape.pixscape.PixscapeApplication.Companion.CHANNEL_ID
 import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_GPS_LOCATION
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_SCAPE_LOCATION
-import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_STOP_TIMER
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_TIME
 import com.scape.pixscape.fragments.CameraFragment.Companion.CONTINUOUS_MODE
+import com.scape.pixscape.manager.ScapeClientManager
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.scapekit.*
 import java.util.*
@@ -31,6 +30,7 @@ import java.util.Timer
 import java.util.concurrent.TimeUnit
 
 class TrackTraceService : Service(), ScapeSessionObserver {
+
 
     private var isDebug = false
 
@@ -84,10 +84,12 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
     @SuppressLint("MissingPermission")
     private fun startUpdatingLocation(isContinuousModeEnabled: Boolean) {
-        if(isContinuousModeEnabled) {
-            scapeClient?.scapeSession?.startFetch(this)
-        } else {
-            scapeClient!!.scapeSession!!.getMeasurements(this)
+        if (scapeClient != null && scapeClient?.scapeSession != null) {
+            if(isContinuousModeEnabled) {
+                scapeClient?.scapeSession?.startFetch(this)
+            } else {
+                scapeClient?.scapeSession?.getMeasurements(this)
+            }
         }
     }
 
@@ -183,7 +185,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     override fun onCreate() {
         super.onCreate()
 
-        // We create a default dummy notitifcation which allows us to call startForeground as early as possible and in a clean manner
+        // We create a default dummy notifcation which allows us to call startForeground as early as possible and in a clean manner
         // so when stopSelf is called, Android does not crash on us with a fatal exception
         // TODO test on Android Nougat and Lollipop devices
 
@@ -201,7 +203,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         }
 
         context = this
-        scapeClient = PixscapeApplication.sharedInstance?.scapeClient
+        scapeClient = ScapeClientManager.sharedInstance(context)?.scapeClient
         sharedPref = getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
     }
 
@@ -234,31 +236,6 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
     // region ScapeSessionObserver
 
-    private fun onDeviceLocationUpdatedSingleMode(measurements: LocationMeasurements?) {
-        if (measurements == null) return
-
-        val newLatLng = measurements.latLng
-        if(newLatLng != null) {
-            // single mode is enabled so the RouteSection's beginning and end will be the same
-            // basically a single location
-            gpsLocations.add(RouteSection(com.scape.pixscape.models.dto.Location(newLatLng.latitude,
-                                                                                 newLatLng.longitude),
-                                          com.scape.pixscape.models.dto.Location(newLatLng.latitude,
-                                                                                 newLatLng.longitude)))
-        }
-
-        val bundle = Bundle().apply {
-            putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
-        }
-
-        val intent = Intent().apply {
-            action = BROADCAST_ACTION_GPS_LOCATION
-            putExtras(bundle)
-        }
-
-        sendBroadcast(intent)
-    }
-
     private fun onDeviceLocationUpdatedContinuousMode(measurements: LocationMeasurements?) {
         if (measurements == null) return
 
@@ -287,39 +264,6 @@ class TrackTraceService : Service(), ScapeSessionObserver {
 
         val intent = Intent().apply {
             action = BROADCAST_ACTION_GPS_LOCATION
-            putExtras(bundle)
-        }
-
-        sendBroadcast(intent)
-    }
-
-    private fun onScapeLocationUpdatedSingleMode(measurements: ScapeMeasurements?) {
-        val scapeMeasurements = measurements ?: return
-
-        if (scapeMeasurements?.measurementsStatus != ScapeMeasurementsStatus.RESULTS_FOUND) {
-            return
-        }
-
-        val score = scapeMeasurements.confidenceScore ?: 0.0
-        if(score < 3.0) {
-            return
-        }
-
-        val newLatLng = scapeMeasurements.latLng
-        if(newLatLng != null) {
-            // single mode is enabled so the RouteSection's beginning and end will be the same
-            // basically a single location
-            scapeLocations.add(RouteSection(com.scape.pixscape.models.dto.Location(newLatLng.latitude,
-                                                                                   newLatLng.longitude),
-                                            com.scape.pixscape.models.dto.Location(newLatLng.latitude,
-                                                                                   newLatLng.longitude)))
-        }
-
-        val bundle = Bundle().apply {
-            putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
-        }
-        val intent = Intent().apply {
-            action = BROADCAST_ACTION_SCAPE_LOCATION
             putExtras(bundle)
         }
 
@@ -368,16 +312,12 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     override fun onDeviceLocationMeasurementsUpdated(session: ScapeSession?, measurements: LocationMeasurements?) {
         if(isContinuousModeEnabled) {
             onDeviceLocationUpdatedContinuousMode(measurements)
-        } else {
-            onDeviceLocationUpdatedSingleMode(measurements)
         }
     }
 
     override fun onScapeMeasurementsUpdated(session: ScapeSession?, measurements: ScapeMeasurements?) {
         if(isContinuousModeEnabled) {
             onScapeLocationUpdatedContinuousMode(measurements)
-        } else {
-            onScapeLocationUpdatedSingleMode(measurements)
         }
     }
 
@@ -386,14 +326,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     }
 
     override fun onScapeSessionError(session: ScapeSession?, state: ScapeSessionState, error: String) {
-        if(!isContinuousModeEnabled) {
-            val intent = Intent().apply {
-                action = BROADCAST_ACTION_STOP_TIMER
-                putExtra(SCAPE_ERROR_STATE_KEY, state.ordinal)
-            }
-
-            sendBroadcast(intent)
-        }
+        // TODO show UNAVAILABLE_AREA even for continuous mode, if user gets outside available area.
     }
 
     override fun onScapeMeasurementsRequested(session: ScapeSession?, timestamp: Double) {
