@@ -34,10 +34,12 @@ import com.scape.pixscape.manager.ScapeClientManager
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
+import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_MEASUREMENTS_STATUS_KEY
 import com.scape.pixscape.utils.CameraIntrinsics
 import com.scape.pixscape.utils.downloadKmlFileAsync
 import com.scape.pixscape.utils.placeMarker
 import com.scape.pixscape.utils.showSnackbar
+import com.scape.scapekit.ScapeMeasurementsStatus
 import com.scape.scapekit.ScapeSessionState
 import com.scape.scapekit.setByteBuffer
 import kotlinx.android.synthetic.main.camera_ui_container.*
@@ -88,7 +90,9 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         private var gpsRouteSections: List<RouteSection> = ArrayList()
         private var scapeRouteSections: List<RouteSection> = ArrayList()
         private var scapeSessionState: ScapeSessionState = ScapeSessionState.NO_ERROR
+        private var scapeMeasurementsStatus: ScapeMeasurementsStatus = ScapeMeasurementsStatus.RESULTS_FOUND
         private var scapeSessionStateValues = ScapeSessionState.values()
+        private var scapeMeasurementsStatusValues = ScapeMeasurementsStatus.values()
     }
 
     private val frameProcessor = FrameProcessor { frame ->
@@ -166,6 +170,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                     if(activity == null) return
                     scapeSessionState = scapeSessionStateValues[intent.getIntExtra(SCAPE_ERROR_STATE_KEY,
                                                                                    ScapeSessionState.NO_ERROR.ordinal)]
+                    scapeMeasurementsStatus = scapeMeasurementsStatusValues[intent.getIntExtra(SCAPE_MEASUREMENTS_STATUS_KEY,
+                                                                                               ScapeMeasurementsStatus.RESULTS_FOUND.ordinal)]
 
                     showErrorMessage()
 
@@ -487,20 +493,39 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private fun showErrorMessage() {
         when(scapeSessionState) {
             ScapeSessionState.AUTHENTICATION_ERROR, ScapeSessionState.NETWORK_ERROR -> {
-                container.showSnackbar("Something went wrong with your internet connection, try again",
+                container.showSnackbar(getString(R.string.localization_network_error),
                                        R.color.red,
                                        4500)
             }
             ScapeSessionState.LOCKING_POSITION_ERROR -> {
-                container.showSnackbar("Could not lock your position, try again",
+                var errMessage = getString(R.string.localization_error)
+
+                // check if locking cannot be achieved due to unavailable area
+                if (scapeMeasurementsStatus == ScapeMeasurementsStatus.UNAVAILABLE_AREA) {
+                    errMessage = getString(R.string.localization_unavailable_area)
+                }
+
+                container.showSnackbar(errMessage,
                                        R.color.red,
                                        4500)
             }
             ScapeSessionState.NO_ERROR                                              -> {}
-            ScapeSessionState.LOCATION_SENSORS_ERROR                                -> {}
-            ScapeSessionState.MOTION_SENSORS_ERROR                                  -> {}
-            ScapeSessionState.IMAGE_SENSORS_ERROR                                   -> {}
-            ScapeSessionState.UNEXPECTED_ERROR                                      -> {}
+            ScapeSessionState.LOCATION_SENSORS_ERROR,
+            ScapeSessionState.MOTION_SENSORS_ERROR                                  -> {
+                container.showSnackbar(getString(R.string.localization_sensors_error),
+                    R.color.red,
+                    4500)
+            }
+            ScapeSessionState.IMAGE_SENSORS_ERROR                                   -> {
+                container.showSnackbar(getString(R.string.localization_image_error),
+                    R.color.red,
+                    4500)
+            }
+            ScapeSessionState.UNEXPECTED_ERROR                                      -> {
+                container.showSnackbar(getString(R.string.localization_generic_error),
+                    R.color.red,
+                    4500)
+            }
         }
     }
 

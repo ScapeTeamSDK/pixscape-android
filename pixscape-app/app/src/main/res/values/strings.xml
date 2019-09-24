@@ -84,4 +84,13 @@
     <string name="cameraview_default_autofocus_marker">com.otaliastudios.cameraview.markers.DefaultAutoFocusMarker</string>
     <string name="my_traces">My Traces</string>
 
+    <!-- Localization -->
+    <string name="localization_in_progress">Locking your position, please wait..</string>
+    <string name="localization_unavailable_area">This area is not yet available.</string>
+    <string name="localization_network_error">Something went wrong with your internet connection, try again.</string>
+    <string name="localization_error">"Could not lock your position, try again</string>
+    <string name="localization_sensors_error">Device sensors not ready yet, try again.</string>
+    <string name="localization_generic_error">Something went wrong, please try again.</string>
+    <string name="localization_image_error">Camera feed is not ready, please try again.</string>
+
 </resources>

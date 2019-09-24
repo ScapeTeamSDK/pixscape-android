@@ -51,6 +51,7 @@ class TrackTraceService : Service(), ScapeSessionObserver {
         var paused = false
         const val NOTIFICATION_ID = 5
         const val SCAPE_ERROR_STATE_KEY = "com.scape.pixscape.trackactivityservice.scapeerrorstatekey"
+        const val SCAPE_MEASUREMENTS_STATUS_KEY = "com.scape.pixscape.trackactivityservice.scapemeasurementsstatuskey"
         const val MILLIS_DATA_KEY = "com.scape.pixscape.trackactivityservice.millisdatakey"
         const val ROUTE_GPS_SECTIONS_DATA_KEY = "com.scape.pixscape.trackactivityservice.routegpssectionsdatakey"
         const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.trackactivityservice.routegpssectionsdatakey"
@@ -326,7 +327,6 @@ class TrackTraceService : Service(), ScapeSessionObserver {
     }
 
     override fun onScapeSessionError(session: ScapeSession?, state: ScapeSessionState, error: String) {
-        // TODO show UNAVAILABLE_AREA even for continuous mode, if user gets outside available area.
     }
 
     override fun onScapeMeasurementsRequested(session: ScapeSession?, timestamp: Double) {
