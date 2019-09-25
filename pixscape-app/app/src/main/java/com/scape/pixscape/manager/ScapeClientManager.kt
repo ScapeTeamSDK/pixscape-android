@@ -17,19 +17,7 @@ import java.util.*
 
 class ScapeClientManager private constructor(context: Context) {
 
-    internal object InstanceHolder {
-        internal var INSTANCE:  ScapeClientManager? = null
-    }
-
-    internal companion object {
-        fun sharedInstance(context: Context): ScapeClientManager? {
-            if (InstanceHolder.INSTANCE == null) {
-                InstanceHolder.INSTANCE = ScapeClientManager(context)
-            }
-
-            return InstanceHolder.INSTANCE
-        }
-    }
+    companion object: SingletonHolder<ScapeClientManager, Context>(::ScapeClientManager)
 
     var scapeClient: CoreScapeClient? = null
     var context: Context? = null
@@ -49,7 +37,6 @@ class ScapeClientManager private constructor(context: Context) {
         scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.CONSOLE))
     }
 
-
     fun getMeasurements() {
         scapeClient?.scapeSession?.getMeasurements(object: ScapeSessionObserver {
             override fun onScapeCoverageUpdated(session: ScapeSession?, p1: Boolean) {
@@ -59,6 +46,7 @@ class ScapeClientManager private constructor(context: Context) {
             }
 
             override fun onScapeMeasurementsUpdated(scapeSession: ScapeSession?, measurements: ScapeMeasurements?) {
+                println(" onScapeMeasurementsUpdated $measurements")
                 val scapeMeasurements = measurements ?: return
 
                 when(scapeMeasurements.measurementsStatus) {
@@ -74,6 +62,7 @@ class ScapeClientManager private constructor(context: Context) {
             }
 
             override fun onDeviceLocationMeasurementsUpdated(session: ScapeSession?, measurements: LocationMeasurements?) {
+                println(" onScapeMeasurementsUpdated  $measurements")
                 if (measurements == null) return
 
                 broadcastLocationMeasurements(measurements)
@@ -127,6 +116,8 @@ class ScapeClientManager private constructor(context: Context) {
     }
 
     private fun broadcastScapeMeasurements(scapeMeasurements: ScapeMeasurements) {
+        println(" Confidence score ${scapeMeasurements.confidenceScore}")
+
         val score = scapeMeasurements.confidenceScore ?: 0.0
         if(score < 3.0) {
             return
@@ -151,5 +142,29 @@ class ScapeClientManager private constructor(context: Context) {
         }
 
         context?.sendBroadcast(intent)
+    }
+}
+
+open class SingletonHolder<out T: Any, in A>(creator: (A) -> T) {
+    private var creator: ((A) -> T)? = creator
+    @Volatile private var instance: T? = null
+
+    fun sharedInstance(arg: A): T {
+        val i = instance
+        if (i != null) {
+            return i
+        }
+
+        return synchronized(this) {
+            val i2 = instance
+            if (i2 != null) {
+                i2
+            } else {
+                val created = creator!!(arg)
+                instance = created
+                creator = null
+                created
+            }
+        }
     }
 }
