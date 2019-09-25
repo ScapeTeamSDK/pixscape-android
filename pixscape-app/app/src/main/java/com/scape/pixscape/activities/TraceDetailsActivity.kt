@@ -53,7 +53,7 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
             googleMap?.setMapStyle(mapStyleOptions)
 
             GlobalScope.launch(Dispatchers.Main) {
-                val layer = KmlLayer(googleMap, downloadKmlFileAsync().await(), this as Context)
+                val layer = KmlLayer(googleMap, downloadKmlFileAsync().await(), applicationContext)
                 layer.addLayerToMap()
             }
         } catch (ex: UninitializedPropertyAccessException) {
