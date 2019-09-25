@@ -132,6 +132,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private val trackTraceBroadcastReceiver = object : BroadcastReceiver() {
         @SuppressLint("SetTextI18n")
         override fun onReceive(context: Context?, intent: Intent?) {
+            Log.d("Broadcastreceiver", "CameraFragment onReceive broadcast")
             when (intent!!.action) {
                 BROADCAST_ACTION_TIME         -> {
                     measuredTimeInMillis = intent.getLongExtra(TrackTraceService.MILLIS_DATA_KEY, 0L)
@@ -151,6 +152,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 }
                 BROADCAST_ACTION_SCAPE_LOCATION -> {
                     if (activity == null) return
+
                     scapeRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_SCAPE_SECTIONS_DATA_KEY)
 
                     fillMap()
@@ -159,9 +161,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                     // trigger BROADCAST_ACTION_STOP_TIMER which effectively stops the service,
                     // but if we have a succesful scape result then we need to stop the service here when in single mode
                     if(!isContinuousModeEnabled) {
-                        stopTimerAndForegroundService()
+                        stopSingleLocalization()
                     }
-
                     // don't compute metrics for scape routes
 
                     if (sharedPref == null) return
@@ -175,10 +176,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
                     showErrorMessage()
 
-                    stopTimerAndForegroundService()
-
                     if(isContinuousModeEnabled) {
+                        stopTimerAndForegroundService()
+
                         startTrackTraceActivity()
+                    } else {
+                        stopSingleLocalization()
                     }
                 }
             }
@@ -195,8 +198,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         view_camera_center.setOnClickListener {
             if (view_pager.currentItem != 1) {
                 view_pager.currentItem = 1
-            } else if(!view_switch_bottom.isOn) { // we are not in the continous mode
-
+            } else if(!view_switch_bottom.isOn) { // we are not in the continuous mode
                 startSingleShotLocalization()
             }
         }
@@ -282,11 +284,11 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         dots_view?.visibility = View.VISIBLE
         container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, 3000)
 
+        isContinuousModeEnabled = false
+
         registerBroadcastReveiver()
 
         ScapeClientManager.sharedInstance(activity!!)?.getMeasurements()
-
-        activity?.let { it1 -> ScapeClientManager.sharedInstance(it1)?.getMeasurements() }
     }
 
     private fun startForegroundTrackService() {
@@ -302,7 +304,15 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     private fun stopForegroundTrackService() {
-        activity?.stopService(Intent(context, TrackTraceService::class.java))
+        if (isContinuousModeEnabled)
+            activity?.stopService(Intent(context, TrackTraceService::class.java))
+
+        activity?.unregisterReceiver(trackTraceBroadcastReceiver)
+    }
+
+    private fun stopSingleLocalization() {
+        dots_view?.visibility = View.GONE
+        view_switch_bottom?.postDelayed({view_switch_bottom?.visibility = View.VISIBLE}, 2000)
 
         activity?.unregisterReceiver(trackTraceBroadcastReceiver)
     }
@@ -310,15 +320,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private fun stopTimerAndForegroundService() {
         timerState = TimerState.Idle
 
-        if(isContinuousModeEnabled) {
-            miniMap?.clear()
-        }
+        miniMap?.clear()
 
         time?.base = SystemClock.elapsedRealtime()
 
         pause_timer_button?.hide()
         stop_timer_button?.visibility = View.GONE
-        dots_view?.visibility = View.GONE
 
         view_switch_bottom?.postDelayed({view_switch_bottom?.visibility = View.VISIBLE}, 2000)
 
