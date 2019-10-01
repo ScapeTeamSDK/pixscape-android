@@ -23,6 +23,8 @@ import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_SC
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
+import com.scape.pixscape.utils.getNetworkStrengthInInt
+import com.scape.pixscape.utils.getSignalStrength
 import com.scape.scapekit.*
 import java.util.*
 import java.util.Timer
@@ -80,6 +82,24 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
                 scapeClient?.scapeSession?.startFetch(this)
             } else {
                 // we use startFetch until we get one measurement/error, until we fix getMeasurements on SDK side
+
+                // only 3G:::: -127, -84
+                // only WIFI:: -42, -86
+                // both:::
+                // none::
+                // wifi via hotspot::
+
+//                val initialTime = System.currentTimeMillis()
+//                val strength = getNetworkStrengthInInt(context!!)
+//                val endTime = System.currentTimeMillis()
+//
+//                println("Duration: ${endTime-initialTime} strength: ${strength}")
+//
+//                val sss = getSignalStrength(context!!)
+//                val endTime2 = System.currentTimeMillis()
+//
+//                println("Duration: ${endTime2-endTime} cell strength: $sss")
+
                 scapeClient?.scapeSession?.startFetch(this)
             }
         }
