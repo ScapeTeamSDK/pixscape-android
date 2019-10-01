@@ -6,38 +6,15 @@ import android.app.NotificationManager
 import android.graphics.Color
 import android.os.Build
 import androidx.annotation.RequiresApi
-import com.scape.scapekit.LogLevel
-import com.scape.scapekit.LogOutput
-import com.scape.scapekit.CoreScape
-import com.scape.scapekit.CoreScapeClient
-import java.util.*
 
 class PixscapeApplication: Application() {
 
-    private object PixscapeApplicationHolder {
-        internal var INSTANCE: PixscapeApplication? = null
-    }
-
     companion object {
         const val CHANNEL_ID = "timerServiceChannel"
-
-        val sharedInstance: PixscapeApplication?
-            get() = PixscapeApplicationHolder.INSTANCE
     }
-
-    var scapeClient: CoreScapeClient? = null
 
     override fun onCreate() {
         super.onCreate()
-
-        PixscapeApplicationHolder.INSTANCE = this
-
-        scapeClient = CoreScape.coreScapeClientBuilder
-                .withApiKey(BuildConfig.SCAPEKIT_API_KEY)
-                .withContext(applicationContext)
-                .withDebugSupport(true)
-                .build()
-        scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.CONSOLE))
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel()
