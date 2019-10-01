@@ -93,4 +93,8 @@
     <string name="localization_generic_error">Something went wrong, please try again.</string>
     <string name="localization_image_error">Camera feed is not ready, please try again.</string>
 
+    <!-- Network signal strength -->
+    <string name="network_signal_fair">Your device has a slow network connection, please retry.</string>
+    <string name="network_signal_weak">Your device not have a reliable network connection, please retry.</string>
+
 </resources>

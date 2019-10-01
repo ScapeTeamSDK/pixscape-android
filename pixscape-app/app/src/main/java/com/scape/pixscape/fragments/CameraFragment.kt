@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.*
 import android.graphics.Color
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.os.SystemClock
@@ -12,6 +13,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.RelativeLayout
+import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.viewpager.widget.ViewPager
@@ -35,10 +37,7 @@ import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_MEASUREMENTS_STATUS_KEY
-import com.scape.pixscape.utils.CameraIntrinsics
-import com.scape.pixscape.utils.downloadKmlFileAsync
-import com.scape.pixscape.utils.placeMarker
-import com.scape.pixscape.utils.showSnackbar
+import com.scape.pixscape.utils.*
 import com.scape.scapekit.ScapeMeasurementsStatus
 import com.scape.scapekit.ScapeSessionState
 import com.scape.scapekit.setByteBuffer
@@ -279,6 +278,24 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private fun startSingleShotLocalization() {
         Log.d("CameraFragment", "startSingleShotLocalization")
 
+        val signalStrength = checkNetworkSignalStrength(context!!)
+        Log.d("NetworkSignalStrength", "$signalStrength")
+
+        when (signalStrength) {
+            NetworkSignalStrength.Weak -> {
+                container.showSnackbar(getString(R.string.network_signal_weak),
+                    R.color.red,
+                    4500)
+
+            }
+            NetworkSignalStrength.Fair -> {
+                container.showSnackbar(getString(R.string.network_signal_fair),
+                    R.color.red,
+                    4500)
+            }
+            else -> {}
+        }
+        
         view_switch_bottom?.visibility = View.GONE
         dots_view?.visibility = View.VISIBLE
         container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, 3000)

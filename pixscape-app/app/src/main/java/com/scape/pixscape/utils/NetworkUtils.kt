@@ -10,57 +10,89 @@ import android.net.ConnectivityManager.TYPE_MOBILE
 import android.net.ConnectivityManager.TYPE_WIFI
 import android.net.NetworkInfo
 import android.net.wifi.WifiManager
+import java.util.*
 
-enum class WifiSignalStrength {
+enum class NetworkSignalStrength {
     Excellent,
     Good,
     Fair,
-    Weak
+    Weak,
+    Unavailable
 }
 
+enum class ConnectionType {
+    Wifi,
+    Mobile
+}
 
-fun getWifiSignalStrength(context: Context): WifiSignalStrength {
-    val initialTime = System.currentTimeMillis()
-    var wifiManager =  (context.getSystemService(Context.WIFI_SERVICE)) as WifiManager
+fun getWifiSignalStrength(context: Context):  NetworkSignalStrength {
+    val wifiManager =  (context.getSystemService(Context.WIFI_SERVICE)) as WifiManager
 
-    var wifiInfo = wifiManager.connectionInfo
-
-//    WifiManager.calculateSignalLevel(wifiInfo.rssi, 5)
+    val wifiInfo = wifiManager.connectionInfo
 
     val level = wifiInfo.rssi
-    var networkStrength = WifiSignalStrength.Weak
+    var networkStrength = NetworkSignalStrength.Unavailable
 
     if (level <= 0 && level >= -50) {
         //Best signal
-        networkStrength = WifiSignalStrength.Excellent
+        networkStrength = NetworkSignalStrength.Excellent
     } else if (level < -50 && level >= -60) {
         //Good signal
-        networkStrength = WifiSignalStrength.Good
+        networkStrength = NetworkSignalStrength.Good
     } else if (level < -60 && level >= -70) {
         //Fair signal
-        networkStrength = WifiSignalStrength.Fair
+        networkStrength = NetworkSignalStrength.Fair
     } else if (level < -70) {
         //Very weak signal
-        networkStrength = WifiSignalStrength.Weak
+        networkStrength = NetworkSignalStrength.Weak
     }
 
     return networkStrength
 }
 
-fun getNetworkignalStrength() {
+fun checkConnectionType(context: Context): EnumSet<ConnectionType> {
+    val connectivityManager = context!!.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
+    var isWifiConn = false
+    var isMobileConn = false
+    connectivityManager.allNetworks.forEach { network ->
+        connectivityManager.getNetworkInfo(network).apply {
+            when (type) {
+                TYPE_WIFI -> {
+                    isWifiConn = isWifiConn or isConnected
+                }
+                TYPE_MOBILE -> {
+                    isMobileConn = isMobileConn or isConnected
+                }
+            }
+        }
+    }
+
+    if (isWifiConn && isMobileConn)
+        return EnumSet.of(ConnectionType.Wifi, ConnectionType.Mobile)
+
+    if (isWifiConn)
+        return EnumSet.of(ConnectionType.Wifi)
+
+    if (isMobileConn)
+        return EnumSet.of(ConnectionType.Mobile)
+
+    return EnumSet.of(null)
 }
 
-fun checkSignal(context: Context) {
+fun checkNetworkSignalStrength(context: Context): NetworkSignalStrength {
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-    val networkInfo: NetworkInfo? = connectivityManager.activeNetworkInfo
+    val networkInfo: NetworkInfo = connectivityManager.activeNetworkInfo ?: return NetworkSignalStrength.Weak
 
-    when (networkInfo?.subtype) {
+    return when (networkInfo.subtype) {
         TYPE_WIFI -> {
+            getWifiSignalStrength(context)
 
         }
         TYPE_MOBILE -> {
-
+            NetworkSignalStrength.Unavailable
         }
+
+        else -> NetworkSignalStrength.Unavailable
     }
 }
