@@ -286,12 +286,14 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 container.showSnackbar(getString(R.string.network_signal_weak),
                     R.color.red,
                     4500)
+                return
 
             }
             NetworkSignalStrength.Fair -> {
                 container.showSnackbar(getString(R.string.network_signal_fair),
                     R.color.red,
                     4500)
+                return
             }
             else -> {}
         }
