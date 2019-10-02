@@ -25,6 +25,7 @@ enum class ConnectionType {
     Mobile
 }
 
+// Only verifies availability, not internet access
 fun getWifiSignalStrength(context: Context):  NetworkSignalStrength {
     val wifiManager =  (context.getSystemService(Context.WIFI_SERVICE)) as WifiManager
 
@@ -51,7 +52,7 @@ fun getWifiSignalStrength(context: Context):  NetworkSignalStrength {
 }
 
 fun checkConnectionType(context: Context): EnumSet<ConnectionType> {
-    val connectivityManager = context!!.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+    val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     var isWifiConn = false
     var isMobileConn = false
@@ -84,10 +85,9 @@ fun checkNetworkSignalStrength(context: Context): NetworkSignalStrength {
     val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val networkInfo: NetworkInfo = connectivityManager.activeNetworkInfo ?: return NetworkSignalStrength.Weak
 
-    return when (networkInfo.subtype) {
+    return when (networkInfo.type) {
         TYPE_WIFI -> {
             getWifiSignalStrength(context)
-
         }
         TYPE_MOBILE -> {
             NetworkSignalStrength.Unavailable
