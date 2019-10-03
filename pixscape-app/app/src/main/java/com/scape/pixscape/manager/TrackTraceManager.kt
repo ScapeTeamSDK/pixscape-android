@@ -59,7 +59,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
             .withDebugSupport(true)
             .build()
 
-        scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_VERBOSE, EnumSet.of(LogOutput.CONSOLE))
+        scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.FILE, LogOutput.CONSOLE))
     }
 
     fun startUpdatingLocation(isContinuousModeEnabled: Boolean) {

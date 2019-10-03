@@ -53,8 +53,13 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
             googleMap?.setMapStyle(mapStyleOptions)
 
             GlobalScope.launch(Dispatchers.Main) {
-                val layer = KmlLayer(googleMap, downloadKmlFileAsync().await(), applicationContext)
-                layer.addLayerToMap()
+                try {
+                    val layer = KmlLayer(googleMap, downloadKmlFileAsync().await(), applicationContext)
+                    layer.addLayerToMap()
+                } catch (ex: Exception) {
+                    Log.e("downloadKmlFileAsync", "cannot download $ex")
+                }
+
             }
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google map", "fillMap() invoked with uninitialized googleMap")

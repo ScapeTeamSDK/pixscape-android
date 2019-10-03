@@ -37,6 +37,7 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     private lateinit var fullMap: GoogleMap
 
     companion object {
+        private const val TAG = "TrackTraceFrag"
         private var gpsRouteSections: List<RouteSection> = ArrayList()
         private var scapeRouteSections: List<RouteSection> = ArrayList()
     }
@@ -89,9 +90,14 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(context, R.raw.style_json)
         fullMap.setMapStyle(mapStyleOptions)
 
+
         GlobalScope.launch(Dispatchers.Main) {
-            val layer = KmlLayer(fullMap, downloadKmlFileAsync().await(), context)
-            layer.addLayerToMap()
+            try {
+                val layer = KmlLayer(fullMap, downloadKmlFileAsync().await(), context)
+                layer.addLayerToMap()
+            } catch (ex: Exception) {
+                Log.e(TAG, "downloadKmlFileAsync failed, reason: $ex")
+            }
         }
 
         map_mode_switch?.setOnToggledListener { toggleableView, isOn ->
@@ -120,8 +126,12 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
             fullMap.clear()
 
             GlobalScope.launch(Dispatchers.Main) {
-                val layer = KmlLayer(fullMap, downloadKmlFileAsync().await(), context)
-                layer.addLayerToMap()
+                try {
+                    val layer = KmlLayer(fullMap, downloadKmlFileAsync().await(), context)
+                    layer.addLayerToMap()
+                } catch (ex: Exception) {
+                    Log.e(TAG, "downloadKmlFileAsync failed, reason: $ex")
+                }
             }
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
@@ -211,7 +221,6 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
             addAction(CameraFragment.BROADCAST_ACTION_GPS_LOCATION)
             addAction(CameraFragment.BROADCAST_ACTION_SCAPE_LOCATION)
         }
-
         activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
 
         try {
@@ -230,7 +239,7 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         try {
             activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.e("TrackTraceFrag", e.toString())
+            Log.e(TAG, e.toString())
         }
     }
 
