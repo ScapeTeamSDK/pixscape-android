@@ -34,18 +34,15 @@ fun getWifiSignalStrength(context: Context):  NetworkSignalStrength {
     val level = wifiInfo.rssi
     var networkStrength = NetworkSignalStrength.Unavailable
 
-    if (level <= 0 && level >= -50) {
-        //Best signal
-        networkStrength = NetworkSignalStrength.Excellent
-    } else if (level < -50 && level >= -60) {
-        //Good signal
-        networkStrength = NetworkSignalStrength.Good
-    } else if (level < -60 && level >= -70) {
-        //Fair signal
-        networkStrength = NetworkSignalStrength.Fair
-    } else if (level < -70) {
-        //Very weak signal
-        networkStrength = NetworkSignalStrength.Weak
+    when {
+        level <= 0 && level >= -50 -> //Best signal
+            networkStrength = NetworkSignalStrength.Excellent
+        level < -50 && level >= -60 -> //Good signal
+            networkStrength = NetworkSignalStrength.Good
+        level < -60 && level >= -70 -> //Fair signal
+            networkStrength = NetworkSignalStrength.Fair
+        level < -70 -> //Very weak signal
+            networkStrength = NetworkSignalStrength.Weak
     }
 
     return networkStrength
