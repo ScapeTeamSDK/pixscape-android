@@ -35,10 +35,7 @@ import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
 import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_MEASUREMENTS_STATUS_KEY
-import com.scape.pixscape.utils.CameraIntrinsics
-import com.scape.pixscape.utils.downloadKmlFileAsync
-import com.scape.pixscape.utils.placeMarker
-import com.scape.pixscape.utils.showSnackbar
+import com.scape.pixscape.utils.*
 import com.scape.scapekit.ScapeMeasurementsStatus
 import com.scape.scapekit.ScapeSessionState
 import com.scape.scapekit.setByteBuffer
@@ -72,6 +69,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private var sharedPref: SharedPreferences? = null
 
     companion object {
+        private const val TAG = "CameraFragment"
         private var isContinuousModeEnabled: Boolean = false
 
         const val BROADCAST_ACTION_TIME = "com.scape.pixscape.camerafragment.broadcastreceivertime"
@@ -265,7 +263,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     private fun registerBroadcastReceiver() {
-        Log.d("CameraFragment", "registerBroadcastReceiver")
+        Log.d(TAG, "registerBroadcastReceiver")
         val intentFilter = IntentFilter().apply {
             addAction(BROADCAST_ACTION_GPS_LOCATION)
             addAction(BROADCAST_ACTION_SCAPE_LOCATION)
@@ -277,8 +275,28 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     private fun startSingleShotLocalization() {
-        Log.d("CameraFragment", "startSingleShotLocalization")
+        Log.d(TAG, "startSingleShotLocalization")
 
+        val signalStrength = checkNetworkSignalStrength(context!!)
+        Log.d(TAG, "Network signal strength: $signalStrength")
+
+        when (signalStrength) {
+            NetworkSignalStrength.Weak -> {
+                container.showSnackbar(getString(R.string.network_signal_weak),
+                    R.color.red,
+                    4500)
+                return
+
+            }
+            NetworkSignalStrength.Fair -> {
+                container.showSnackbar(getString(R.string.network_signal_fair),
+                    R.color.red,
+                    4500)
+                return
+            }
+            else -> {}
+        }
+        
         view_switch_bottom?.visibility = View.GONE
         dots_view?.visibility = View.VISIBLE
         container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, 3000)
@@ -318,7 +336,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         try {
             activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.e("TrackTraceFrag receiver exception", e.toString())
+            Log.e( TAG, " exception $e")
         }
     }
 
@@ -365,7 +383,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                     .putExtra(MODE_DATA_KEY, false)
             startActivity(intent)
         } catch (t: Throwable) {
-            Log.e("CameraFragment", t.toString())
+            Log.e(TAG, t.toString())
         }
     }
 
@@ -414,8 +432,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         miniMap?.setMapStyle(mapStyleOptions)
 
         GlobalScope.launch(Dispatchers.Main) {
-            val layer = KmlLayer(miniMap, downloadKmlFileAsync().await(), context)
-            layer.addLayerToMap()
+            try {
+                val layer = KmlLayer(miniMap, downloadKmlFileAsync().await(), context)
+                layer.addLayerToMap()
+            } catch (ex: Exception) {
+                Log.e(TAG, "downloadKmlFileAsync failed, reason: $ex")
+            }
         }
 
         LocationServices.getFusedLocationProviderClient(activity!!)
