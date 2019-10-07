@@ -17,9 +17,15 @@ import com.scape.pixscape.fragments.CameraFragment
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_SCAPE_LOCATION
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_CONNECTIVITY_OFF
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_CONNECTIVITY_ON
+import com.scape.pixscape.fragments.CameraFragment.Companion.MILLIS_DATA_KEY
+import com.scape.pixscape.fragments.CameraFragment.Companion.ROUTE_GPS_SECTIONS_DATA_KEY
+import com.scape.pixscape.fragments.CameraFragment.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
+import com.scape.pixscape.fragments.CameraFragment.Companion.SCAPE_CONFIDENCE_SCORE
+import com.scape.pixscape.fragments.CameraFragment.Companion.SCAPE_ERROR_STATE_KEY
+import com.scape.pixscape.fragments.CameraFragment.Companion.SCAPE_MEASUREMENTS_STATUS_KEY
 import com.scape.pixscape.models.dto.RouteSection
-import com.scape.pixscape.services.TrackTraceService
-import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
+import com.scape.pixscape.utils.MAX_SCAPE_CONFIDENCE_SCORE
+import com.scape.pixscape.utils.MIN_SCAPE_CONFIDENCE_SCORE
 import com.scape.scapekit.*
 import java.util.*
 import java.util.Timer
@@ -33,6 +39,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     var context: Context? = null
 
     private var scapeMeasurementsStatus: ScapeMeasurementsStatus = ScapeMeasurementsStatus.RESULTS_FOUND
+    private var scapeConfidenceScore = MAX_SCAPE_CONFIDENCE_SCORE
 
     private var isDebug = false
 
@@ -131,8 +138,9 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         if (!isContinuousModeEnabled) {
             val intent = Intent().apply {
                 action = CameraFragment.BROADCAST_ACTION_STOP_TIMER
-                putExtra(TrackTraceService.SCAPE_ERROR_STATE_KEY, state.ordinal)
-                putExtra(TrackTraceService.SCAPE_MEASUREMENTS_STATUS_KEY, scapeMeasurementsStatus.ordinal)
+                putExtra(SCAPE_ERROR_STATE_KEY, state.ordinal)
+                putExtra(SCAPE_MEASUREMENTS_STATUS_KEY, scapeMeasurementsStatus.ordinal)
+                putExtra(SCAPE_CONFIDENCE_SCORE, scapeConfidenceScore)
             }
 
             context?.sendBroadcast(intent)
@@ -143,7 +151,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
 
     private fun broadcastLocationMeasurements() {
         val bundle = Bundle().apply {
-            putParcelableArrayList(TrackTraceService.ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
+            putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
         }
 
         val intent = Intent().apply {
@@ -160,6 +168,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         }
         val intent = Intent().apply {
             action = BROADCAST_ACTION_SCAPE_LOCATION
+            putExtra(SCAPE_CONFIDENCE_SCORE, scapeConfidenceScore)
             putExtras(bundle)
         }
 
@@ -205,7 +214,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
             val intent = Intent()
             intent.action = CameraFragment.BROADCAST_ACTION_TIME
             if(isContinuousModeEnabled) {
-                intent.putExtra(TrackTraceService.MILLIS_DATA_KEY, currentTimeInMillis)
+                intent.putExtra(MILLIS_DATA_KEY, currentTimeInMillis)
 
                 context?.sendBroadcast(intent)
             }
@@ -304,6 +313,9 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
 
     private fun onScapeLocationUpdatedSingleMode(measurements: ScapeMeasurements?) {
         Log.d("observer"," onScapeMeasurementsUpdated $measurements ")
+
+        scapeClient?.scapeSession?.stopFetch()
+
         val scapeMeasurements = measurements ?: return
 
         when(scapeMeasurements.measurementsStatus) {
@@ -314,8 +326,11 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
                 scapeMeasurementsStatus = ScapeMeasurementsStatus.UNAVAILABLE_AREA
             }
             ScapeMeasurementsStatus.RESULTS_FOUND -> {
-                val score = scapeMeasurements.confidenceScore ?: 0.0
-                if(score < 3.0) {
+                scapeConfidenceScore = scapeMeasurements.confidenceScore ?: MAX_SCAPE_CONFIDENCE_SCORE
+
+                if(scapeConfidenceScore < MIN_SCAPE_CONFIDENCE_SCORE) {
+
+                    broadcastScapeSessionState(ScapeSessionState.NO_ERROR)
                     return
                 }
 
@@ -333,8 +348,6 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
             }
             ScapeMeasurementsStatus.INTERNAL_ERROR -> {}
         }
-
-        scapeClient?.scapeSession?.stopFetch()
     }
 
     private fun onScapeLocationUpdatedContinuousMode(measurements: ScapeMeasurements?) {

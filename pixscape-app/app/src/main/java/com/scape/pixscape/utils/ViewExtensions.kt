@@ -18,6 +18,8 @@ import androidx.core.graphics.drawable.DrawableCompat
 import com.google.android.libraries.maps.model.BitmapDescriptor
 import com.google.android.libraries.maps.model.BitmapDescriptorFactory
 
+const val SNACKBAR_DURATION_LONG = 4500
+
 /** Same as [AlertView.show] but setting immersive mode in the views's window */
 fun AlertView.showImmersive(window: Window?, activity: AppCompatActivity) {
     window?.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)

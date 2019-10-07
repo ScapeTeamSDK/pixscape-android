@@ -33,9 +33,6 @@ import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.ViewPagerAdapter
 import com.scape.pixscape.manager.TrackTraceManager
 import com.scape.pixscape.models.dto.RouteSection
-import com.scape.pixscape.services.TrackTraceService
-import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_ERROR_STATE_KEY
-import com.scape.pixscape.services.TrackTraceService.Companion.SCAPE_MEASUREMENTS_STATUS_KEY
 import com.scape.pixscape.utils.*
 import com.scape.scapekit.ScapeMeasurementsStatus
 import com.scape.scapekit.ScapeSessionState
@@ -84,6 +81,11 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         const val MODE_DATA_KEY = "com.scape.pixscape.camerafragment.modedatakey"
         const val BROADCAST_CONNECTIVITY_OFF = "com.scape.pixscape.camerafragment.broadcastnetworkoff"
         const val BROADCAST_CONNECTIVITY_ON = "com.scape.pixscape.camerafragment.broadcastnetworkon"
+        const val SCAPE_ERROR_STATE_KEY = "com.scape.pixscape.camerafragment.scapeerrorstatekey"
+        const val SCAPE_MEASUREMENTS_STATUS_KEY = "com.scape.pixscape.camerafragment.scapemeasurementsstatuskey"
+        const val MILLIS_DATA_KEY = "com.scape.pixscape.camerafragment.millisdatakey"
+        const val SCAPE_CONFIDENCE_SCORE = "com.scape.pixscape.camerafragment.confidencescoredatakey"
+
 
         private var timerState = TimerState.Idle
         private var measuredTimeInMillis = 0L
@@ -94,6 +96,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         private var scapeMeasurementsStatus: ScapeMeasurementsStatus = ScapeMeasurementsStatus.RESULTS_FOUND
         private var scapeSessionStateValues = ScapeSessionState.values()
         private var scapeMeasurementsStatusValues = ScapeMeasurementsStatus.values()
+        private var scapeConfidenceScore = 0.0
     }
 
     private val frameProcessor = FrameProcessor { frame ->
@@ -150,14 +153,14 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent!!.action) {
                 BROADCAST_ACTION_TIME         -> {
-                    measuredTimeInMillis = intent.getLongExtra(TrackTraceService.MILLIS_DATA_KEY, 0L)
+                    measuredTimeInMillis = intent.getLongExtra(MILLIS_DATA_KEY, 0L)
 
                     if (measuredTimeInMillis == 0L) Log.w("Broadcastreceiver", "service returned time 0")
                     time.base = SystemClock.elapsedRealtime() - measuredTimeInMillis
                 }
                 BROADCAST_ACTION_GPS_LOCATION -> {
                     if (activity == null) return
-                    gpsRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_GPS_SECTIONS_DATA_KEY)
+                    gpsRouteSections = intent.getParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY)
 
                     distanceInMeters = gpsRouteSections.sumByDouble { section -> section.distance.toDouble() }
 
@@ -168,7 +171,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 BROADCAST_ACTION_SCAPE_LOCATION -> {
                     if (activity == null) return
 
-                    scapeRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_SCAPE_SECTIONS_DATA_KEY)
+                    scapeRouteSections = intent.getParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY)
 
                     fillMap()
 
@@ -186,6 +189,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                                                                                    ScapeSessionState.NO_ERROR.ordinal)]
                     scapeMeasurementsStatus = scapeMeasurementsStatusValues[intent.getIntExtra(SCAPE_MEASUREMENTS_STATUS_KEY,
                                                                                                ScapeMeasurementsStatus.RESULTS_FOUND.ordinal)]
+                    scapeConfidenceScore = intent.getDoubleExtra(SCAPE_CONFIDENCE_SCORE, MAX_SCAPE_CONFIDENCE_SCORE)
 
                     showErrorMessage()
 
@@ -193,7 +197,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                         stopTimerAndContinuousLocalization()
 
                         startTrackTraceActivity()
-                    } else {
+                    }
+                    else {
                         stopSingleLocalization()
                     }
                 }
@@ -303,14 +308,14 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             NetworkSignalStrength.Weak -> {
                 container.showSnackbar(getString(R.string.network_signal_weak),
                     R.color.red,
-                    4500)
+                    SNACKBAR_DURATION_LONG)
                 return
 
             }
             NetworkSignalStrength.Fair -> {
                 container.showSnackbar(getString(R.string.network_signal_fair),
                     R.color.red,
-                    4500)
+                    SNACKBAR_DURATION_LONG)
                 return
             }
             else -> {}
@@ -548,7 +553,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             ScapeSessionState.AUTHENTICATION_ERROR, ScapeSessionState.NETWORK_ERROR -> {
                 container.showSnackbar(getString(R.string.localization_network_error),
                                        R.color.red,
-                                       4500)
+                                       SNACKBAR_DURATION_LONG)
             }
             ScapeSessionState.LOCKING_POSITION_ERROR -> {
                 var errMessage = getString(R.string.localization_error)
@@ -560,24 +565,30 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
                 container.showSnackbar(errMessage,
                                        R.color.red,
-                                       4500)
+                                       SNACKBAR_DURATION_LONG)
             }
-            ScapeSessionState.NO_ERROR                                              -> {}
+            ScapeSessionState.NO_ERROR                                              -> {
+                if (scapeConfidenceScore < MIN_SCAPE_CONFIDENCE_SCORE) {
+                    container.showSnackbar(getString(R.string.localization_error),
+                        R.color.red,
+                        SNACKBAR_DURATION_LONG)
+                }
+            }
             ScapeSessionState.LOCATION_SENSORS_ERROR,
             ScapeSessionState.MOTION_SENSORS_ERROR                                  -> {
                 container.showSnackbar(getString(R.string.localization_sensors_error),
                     R.color.red,
-                    4500)
+                    SNACKBAR_DURATION_LONG)
             }
             ScapeSessionState.IMAGE_SENSORS_ERROR                                   -> {
                 container.showSnackbar(getString(R.string.localization_image_error),
                     R.color.red,
-                    4500)
+                    SNACKBAR_DURATION_LONG)
             }
             ScapeSessionState.UNEXPECTED_ERROR                                      -> {
                 container.showSnackbar(getString(R.string.localization_generic_error),
                     R.color.red,
-                    4500)
+                    SNACKBAR_DURATION_LONG)
             }
         }
     }
