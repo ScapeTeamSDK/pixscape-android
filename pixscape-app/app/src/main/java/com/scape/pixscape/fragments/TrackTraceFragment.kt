@@ -23,8 +23,9 @@ import com.google.android.libraries.maps.model.MapStyleOptions
 import com.google.android.libraries.maps.model.Marker
 import com.google.maps.android.data.kml.KmlLayer
 import com.scape.pixscape.R
+import com.scape.pixscape.fragments.CameraFragment.Companion.ROUTE_GPS_SECTIONS_DATA_KEY
+import com.scape.pixscape.fragments.CameraFragment.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
 import com.scape.pixscape.models.dto.RouteSection
-import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.utils.downloadKmlFileAsync
 import com.scape.pixscape.utils.placeMarker
 import kotlinx.android.synthetic.main.fragment_track_trace.*
@@ -52,7 +53,7 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
                     if (activity == null) return
                     if(context == null) return
 
-                    gpsRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_GPS_SECTIONS_DATA_KEY)
+                    gpsRouteSections = intent.getParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY)
 
                     fillMap()
                 }
@@ -60,7 +61,7 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
                     if (activity == null) return
                     if(context == null) return
 
-                    scapeRouteSections = intent.getParcelableArrayListExtra(TrackTraceService.ROUTE_SCAPE_SECTIONS_DATA_KEY)
+                    scapeRouteSections = intent.getParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY)
 
                     fillMap()
                 }
