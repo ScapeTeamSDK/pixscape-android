@@ -4,29 +4,25 @@
  */
 package com.scape.pixscape.manager
 
-import android.app.Notification
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.Log
 import android.widget.Toast
-import androidx.core.app.NotificationCompat
 import com.scape.pixscape.BuildConfig
-import com.scape.pixscape.PixscapeApplication
-import com.scape.pixscape.R
-import com.scape.pixscape.activities.MainActivity
 import com.scape.pixscape.fragments.CameraFragment
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_SCAPE_LOCATION
+import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_CONNECTIVITY_OFF
+import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_CONNECTIVITY_ON
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.services.TrackTraceService
 import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
 import com.scape.scapekit.*
 import java.util.*
 import java.util.Timer
-import java.util.concurrent.TimeUnit
 
 
 class TrackTraceManager private constructor(context: Context): ScapeSessionObserver {
@@ -60,13 +56,30 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
             .build()
 
         scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.FILE, LogOutput.CONSOLE))
+
+        registerNetworkCallback()
     }
 
+
+    private fun registerNetworkCallback() {
+        val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        connectivityManager.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                //take action when network connection is gained
+                Log.w("Connectivity","Network is available")
+                broadcastNetworkConnectivityChange(true)
+            }
+            override fun onLost(network: Network?) {
+                //take action when network connection is lost
+                Log.w("Connectivity", "Connection lost")
+                broadcastNetworkConnectivityChange(false)
+            }
+        })
+    }
     fun startUpdatingLocation(isContinuousModeEnabled: Boolean) {
         this.isContinuousModeEnabled = isContinuousModeEnabled
 
         timer.scheduleAtFixedRate(UpdateTimeTask(), 10, 10)
-        timer.scheduleAtFixedRate(UpdateNotificationTask(), 1000, 1000)
         timer.scheduleAtFixedRate(NotifyTimer(), 1000, 500)
 
         if(isDebug) {
@@ -104,6 +117,14 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
 
     fun pauseTimer(on: Boolean) {
         paused = on
+    }
+
+    private fun broadcastNetworkConnectivityChange(isNetworkAvailable: Boolean) {
+        val intent = Intent().apply {
+            action = if (isNetworkAvailable) BROADCAST_CONNECTIVITY_ON else BROADCAST_CONNECTIVITY_OFF
+        }
+
+        context?.sendBroadcast(intent)
     }
 
     private fun broadcastScapeSessionState(state: ScapeSessionState) {
@@ -189,58 +210,6 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
                 context?.sendBroadcast(intent)
             }
 
-        }
-    }
-
-    private inner class UpdateNotificationTask : TimerTask() {
-        override fun run() {
-            if (!paused) {
-
-                val notificationIntent = Intent(context, MainActivity::class.java)
-                val pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
-
-                val notification: Notification?
-                val distance: Double
-
-                if(isContinuousModeEnabled) {
-                    val timeFormatted =
-                        if (currentTimeInMillis >= 3600000)
-                            String.format(
-                                "%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(currentTimeInMillis),
-                                TimeUnit.MILLISECONDS.toMinutes(currentTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
-                                TimeUnit.MILLISECONDS.toSeconds(currentTimeInMillis) % TimeUnit.MINUTES.toSeconds(1)
-                            )
-                        else
-                            String.format(
-                                "%02d:%02d",
-                                TimeUnit.MILLISECONDS.toMinutes(currentTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
-                                TimeUnit.MILLISECONDS.toSeconds(currentTimeInMillis) % TimeUnit.MINUTES.toSeconds(1)
-                            )
-
-                    // use gpsLocations instead of scapeLocations as we will probably have more of them
-                    distance = Math.round(gpsLocations.sumByDouble { section -> section.distance.toDouble() } * 100.0) / 100.0
-
-                    notification = NotificationCompat.Builder(context!!, PixscapeApplication.CHANNEL_ID)
-                        .setContentTitle(context?.getString(R.string.notification_title))
-                        .setContentText(timeFormatted.plus(" ").plus(distance.toString()))
-                        .setSmallIcon(R.drawable.ic_play_arrow)
-                        .setContentIntent(pendingIntent)
-                        .setAutoCancel(true)
-                        .build()
-                } else {
-                    // don't compute distance and time if single mode is enabled
-
-                    notification = NotificationCompat.Builder(context!!, PixscapeApplication.CHANNEL_ID)
-                        .setContentTitle(context?.getString(R.string.notification_title))
-                        .setSmallIcon(R.drawable.ic_play_arrow)
-                        .setContentIntent(pendingIntent)
-                        .setAutoCancel(true)
-                        .build()
-                }
-
-                val mNotificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                mNotificationManager.notify(TrackTraceService.NOTIFICATION_ID, notification)
-            }
         }
     }
 

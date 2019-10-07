@@ -23,6 +23,7 @@ import com.google.android.libraries.maps.model.CameraPosition
 import com.google.android.libraries.maps.model.LatLng
 import com.google.android.libraries.maps.model.MapStyleOptions
 import com.google.android.libraries.maps.model.Marker
+import com.google.android.material.snackbar.Snackbar
 import com.google.maps.android.data.kml.KmlLayer
 import com.otaliastudios.cameraview.CameraView
 import com.otaliastudios.cameraview.frame.FrameProcessor
@@ -65,6 +66,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private var miniMapView: MapView? = null
     private var miniMap: GoogleMap? = null
     private var floatingMarkerTitlesOverlay: FloatingMarkerTitlesOverlay? = null
+    private var connectivitySnackBar: Snackbar? = null
 
     private var sharedPref: SharedPreferences? = null
 
@@ -80,6 +82,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         const val ROUTE_GPS_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routegpssectionsdatakey"
         const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routescapesectionsdatakey"
         const val MODE_DATA_KEY = "com.scape.pixscape.camerafragment.modedatakey"
+        const val BROADCAST_CONNECTIVITY_OFF = "com.scape.pixscape.camerafragment.broadcastnetworkoff"
+        const val BROADCAST_CONNECTIVITY_ON = "com.scape.pixscape.camerafragment.broadcastnetworkon"
 
         private var timerState = TimerState.Idle
         private var measuredTimeInMillis = 0L
@@ -122,6 +126,21 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             val byteBuffer = luma
             if(byteBuffer != null) {
                 scapeClient?.scapeSession?.setByteBuffer(byteBuffer, width, height)
+            }
+        }
+    }
+
+    private val networkConnectivityReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when(intent!!.action) {
+                BROADCAST_CONNECTIVITY_OFF -> {
+                    connectivitySnackBar = container.showSnackbar(getString(R.string.localization_network_error),
+                        R.color.red,
+                        Snackbar.LENGTH_INDEFINITE)
+                }
+                BROADCAST_CONNECTIVITY_ON -> {
+                    connectivitySnackBar?.dismiss()
+                }
             }
         }
     }
@@ -612,11 +631,17 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         viewFinder.removeFrameProcessor(frameProcessor)
 
-        // clean up broadcast receiver
+        // clean up broadcast receivers
         try {
             activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
         } catch (e: IllegalArgumentException) {
             Log.e("TrackTraceFrag receiver exception", e.toString())
+        }
+
+        try {
+            activity!!.unregisterReceiver(networkConnectivityReceiver)
+        } catch (e: IllegalArgumentException) {
+            Log.e("TrackTraceFrag Network receiver exception", e.toString())
         }
 
         // clean up viewpager
@@ -668,6 +693,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             addAction(BROADCAST_ACTION_STOP_TIMER)
         }
         activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
+
+        val networkIntentFilter = IntentFilter().apply {
+            addAction(BROADCAST_CONNECTIVITY_OFF)
+            addAction(BROADCAST_CONNECTIVITY_ON)
+        }
+        activity!!.registerReceiver(networkConnectivityReceiver, networkIntentFilter)
     }
 
     // endregion Fragment
