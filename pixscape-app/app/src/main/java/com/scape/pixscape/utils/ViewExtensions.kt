@@ -19,6 +19,7 @@ import com.google.android.libraries.maps.model.BitmapDescriptor
 import com.google.android.libraries.maps.model.BitmapDescriptorFactory
 
 const val SNACKBAR_DURATION_LONG = 4500
+const val SNACKBAR_DURATION_SHORT = 3000
 
 /** Same as [AlertView.show] but setting immersive mode in the views's window */
 fun AlertView.showImmersive(window: Window?, activity: AppCompatActivity) {
@@ -53,6 +54,13 @@ fun View.showSnackbar(snackbarText: String, color: Int, timeLength: Int): Snackb
     snackBar.show()
 
     return snackBar
+}
+
+fun Snackbar.updateSnackBarText(snackbarText: String) {
+    val snackbarView = view
+
+    val sbTextView = snackbarView.findViewById(com.google.android.material.R.id.snackbar_text) as TextView
+    sbTextView.text = snackbarText
 }
 
 fun View.setMargins(leftMarginDp: Int? = null,

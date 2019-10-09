@@ -233,7 +233,6 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         }
     }
 
-    @SuppressLint("ApplySharedPref")
     override fun onDestroyView() {
         super.onDestroyView()
 
