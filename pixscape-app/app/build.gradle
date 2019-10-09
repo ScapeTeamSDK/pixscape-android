@@ -121,4 +121,8 @@ dependencies {
 
     // 3rd party
     implementation 'com.agrawalsuneet.androidlibs:dotsloader:1.4'
+
+    // EventBus
+    implementation 'org.greenrobot:eventbus:3.1.1'
+
 }

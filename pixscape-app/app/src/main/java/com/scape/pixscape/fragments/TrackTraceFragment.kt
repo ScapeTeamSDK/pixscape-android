@@ -1,10 +1,6 @@
 package com.scape.pixscape.fragments
 
 import android.annotation.SuppressLint
-import android.content.BroadcastReceiver
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
 import android.content.res.Resources
 import android.location.Location
 import android.os.Bundle
@@ -23,8 +19,8 @@ import com.google.android.libraries.maps.model.MapStyleOptions
 import com.google.android.libraries.maps.model.Marker
 import com.google.maps.android.data.kml.KmlLayer
 import com.scape.pixscape.R
-import com.scape.pixscape.fragments.CameraFragment.Companion.ROUTE_GPS_SECTIONS_DATA_KEY
-import com.scape.pixscape.fragments.CameraFragment.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
+import com.scape.pixscape.events.LocationMeasurementEvent
+import com.scape.pixscape.events.ScapeMeasurementEvent
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.utils.downloadKmlFileAsync
 import com.scape.pixscape.utils.placeMarker
@@ -32,6 +28,9 @@ import kotlinx.android.synthetic.main.fragment_track_trace.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 
 internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
@@ -43,31 +42,33 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         private var scapeRouteSections: List<RouteSection> = ArrayList()
     }
 
-    private val trackTraceBroadcastReceiver = object : BroadcastReceiver() {
-        @SuppressLint("SetTextI18n")
-        override fun onReceive(context: Context?, intent: Intent?) {
-            val intent = intent ?: return
+    // region EventBus
 
-            when (intent.action) {
-                CameraFragment.BROADCAST_ACTION_GPS_LOCATION   -> {
-                    if (activity == null) return
-                    if(context == null) return
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onEvent(event: LocationMeasurementEvent) {
+        Log.d(TAG, "LocationMeasurementEvent")
 
-                    gpsRouteSections = intent.getParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY)
+        if (activity == null) return
+        if(context == null) return
 
-                    fillMap()
-                }
-                CameraFragment.BROADCAST_ACTION_SCAPE_LOCATION -> {
-                    if (activity == null) return
-                    if(context == null) return
+        gpsRouteSections = event.gpsLocations
 
-                    scapeRouteSections = intent.getParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY)
-
-                    fillMap()
-                }
-            }
-        }
+        fillMap()
     }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onEvent(event: ScapeMeasurementEvent) {
+        Log.d(TAG, "ScapeMeasurementEvent")
+
+        if (activity == null) return
+        if(context == null) return
+
+        scapeRouteSections = event.scapeLocations
+
+        fillMap()
+    }
+
+    // endregion EventBus
 
     // region Private
 
@@ -125,15 +126,6 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     private fun fillMap() {
         try {
             fullMap.clear()
-
-            GlobalScope.launch(Dispatchers.Main) {
-                try {
-                    val layer = KmlLayer(fullMap, downloadKmlFileAsync().await(), context)
-                    layer.addLayerToMap()
-                } catch (ex: Exception) {
-                    Log.e(TAG, "downloadKmlFileAsync failed, reason: $ex")
-                }
-            }
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
             return
@@ -218,11 +210,8 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val intentFilter = IntentFilter().apply {
-            addAction(CameraFragment.BROADCAST_ACTION_GPS_LOCATION)
-            addAction(CameraFragment.BROADCAST_ACTION_SCAPE_LOCATION)
-        }
-        activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
+        EventBus.getDefault().register(this)
+
 
         try {
             full_map_view?.onCreate(savedInstanceState)
@@ -236,11 +225,7 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
     override fun onDestroyView() {
         super.onDestroyView()
 
-        try {
-            activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
-        } catch (e: IllegalArgumentException) {
-            Log.e(TAG, e.toString())
-        }
+        EventBus.getDefault().unregister(this)
     }
 
     // endregion Fragment

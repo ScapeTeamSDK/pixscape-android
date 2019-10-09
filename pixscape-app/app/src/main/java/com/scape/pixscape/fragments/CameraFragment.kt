@@ -1,7 +1,10 @@
 package com.scape.pixscape.fragments
 
 import android.annotation.SuppressLint
-import android.content.*
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.Color
 import android.location.Location
 import android.os.Bundle
@@ -31,6 +34,10 @@ import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
 import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.ViewPagerAdapter
+import com.scape.pixscape.events.LocationMeasurementEvent
+import com.scape.pixscape.events.ScapeMeasurementEvent
+import com.scape.pixscape.events.ScapeSessionStateEvent
+import com.scape.pixscape.events.TimerEvent
 import com.scape.pixscape.manager.TrackTraceManager
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.utils.*
@@ -44,6 +51,9 @@ import kotlinx.android.synthetic.main.view_pager_tabs.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.greenrobot.eventbus.EventBus
+import org.greenrobot.eventbus.Subscribe
+import org.greenrobot.eventbus.ThreadMode
 import java.nio.ByteBuffer
 import java.util.*
 import kotlin.collections.ArrayList
@@ -70,20 +80,12 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         private const val TAG = "CameraFragment"
         private var isContinuousModeEnabled: Boolean = false
 
-        const val BROADCAST_ACTION_TIME = "com.scape.pixscape.camerafragment.broadcastreceivertime"
-        const val BROADCAST_ACTION_GPS_LOCATION = "com.scape.pixscape.camerafragment.broadcastreceivergpslocation"
-        const val BROADCAST_ACTION_SCAPE_LOCATION = "com.scape.pixscape.camerafragment.broadcastreceiverscapelocation"
-        const val BROADCAST_ACTION_MEASUREMENTS_ERROR = "com.scape.pixscape.camerafragment.broadcastreceivermeasurementserror"
         const val TIME_DATA_KEY = "com.scape.pixscape.camerafragment.timedatakey"
-        const val ROUTE_GPS_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routegpssectionsdatakey"
-        const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routescapesectionsdatakey"
         const val MODE_DATA_KEY = "com.scape.pixscape.camerafragment.modedatakey"
         const val BROADCAST_CONNECTIVITY_OFF = "com.scape.pixscape.camerafragment.broadcastnetworkoff"
         const val BROADCAST_CONNECTIVITY_ON = "com.scape.pixscape.camerafragment.broadcastnetworkon"
-        const val SCAPE_ERROR_STATE_KEY = "com.scape.pixscape.camerafragment.scapeerrorstatekey"
-        const val SCAPE_MEASUREMENTS_STATUS_KEY = "com.scape.pixscape.camerafragment.scapemeasurementsstatuskey"
-        const val MILLIS_DATA_KEY = "com.scape.pixscape.camerafragment.millisdatakey"
-        const val SCAPE_CONFIDENCE_SCORE = "com.scape.pixscape.camerafragment.confidencescoredatakey"
+        const val ROUTE_GPS_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routegpssectionsdatakey"
+        const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routescapesectionsdatakey"
 
 
         private var timerState = TimerState.Idle
@@ -93,8 +95,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         private var scapeRouteSections: List<RouteSection> = ArrayList()
         private var scapeSessionState: ScapeSessionState = ScapeSessionState.NO_ERROR
         private var scapeMeasurementsStatus: ScapeMeasurementsStatus = ScapeMeasurementsStatus.RESULTS_FOUND
-        private var scapeSessionStateValues = ScapeSessionState.values()
-        private var scapeMeasurementsStatusValues = ScapeMeasurementsStatus.values()
         private var scapeConfidenceScore = 0.0
     }
 
@@ -147,59 +147,67 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
     }
 
-    private val trackTraceBroadcastReceiver = object : BroadcastReceiver() {
-        @SuppressLint("SetTextI18n")
-        override fun onReceive(context: Context?, intent: Intent?) {
-            when (intent!!.action) {
-                BROADCAST_ACTION_TIME         -> {
-                    measuredTimeInMillis = intent.getLongExtra(MILLIS_DATA_KEY, 0L)
+    // region EventBus
 
-                    if (measuredTimeInMillis == 0L) Log.w("Broadcastreceiver", "service returned time 0")
-                    time.base = SystemClock.elapsedRealtime() - measuredTimeInMillis
-                }
-                BROADCAST_ACTION_GPS_LOCATION -> {
-                    if (activity == null) return
-                    gpsRouteSections = intent.getParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY)
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onEvent(event: LocationMeasurementEvent) {
+        Log.d(TAG, "on LocationMeasurementEvent received")
 
-                    distanceInMeters = gpsRouteSections.sumByDouble { section -> section.distance.toDouble() }
+        if (activity == null) return
+        gpsRouteSections = event.gpsLocations
 
-                    fillMap()
-                }
-                BROADCAST_ACTION_SCAPE_LOCATION -> {
-                    if (activity == null) return
+        distanceInMeters = gpsRouteSections.sumByDouble { section -> section.distance.toDouble() }
 
-                    scapeRouteSections = intent.getParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY)
+        fillMap()
+    }
 
-                    fillMap()
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onEvent(event: ScapeMeasurementEvent) {
+        Log.d(TAG, "on ScapeMeasurementEvent received")
 
-                    // if we have any scape error then the service will
-                    // trigger BROADCAST_ACTION_MEASUREMENTS_ERROR which effectively stops the service,
-                    // but if we have a succesful scape result then we need to stop the service here when in single mode
-                    if(!isContinuousModeEnabled) {
-                        stopSingleLocalization()
-                    }
-                    else {
-                        errorMessageSnackBar?.dismiss()
-                    }
-                    // don't compute metrics for scape routes
-                }
-                BROADCAST_ACTION_MEASUREMENTS_ERROR   -> {
-                    if(activity == null) return
-                    scapeSessionState = scapeSessionStateValues[intent.getIntExtra(SCAPE_ERROR_STATE_KEY,
-                                                                                   ScapeSessionState.NO_ERROR.ordinal)]
-                    scapeMeasurementsStatus = scapeMeasurementsStatusValues[intent.getIntExtra(SCAPE_MEASUREMENTS_STATUS_KEY,
-                                                                                               ScapeMeasurementsStatus.RESULTS_FOUND.ordinal)]
-                    scapeConfidenceScore = intent.getDoubleExtra(SCAPE_CONFIDENCE_SCORE, MAX_SCAPE_CONFIDENCE_SCORE)
+        if (activity == null) return
 
-                    showErrorMessage()
+        scapeRouteSections = event.scapeLocations
 
-                    if(!isContinuousModeEnabled) {
-                        stopSingleLocalization()
-                    }
-                }
-            }
+        fillMap()
+
+        // if we have any scape error then the service will
+        // trigger BROADCAST_ACTION_MEASUREMENTS_ERROR which effectively stops the service,
+        // but if we have a succesful scape result then we need to stop the service here when in single mode
+        if(!isContinuousModeEnabled) {
+            stopSingleLocalization()
+        }
+        else {
+            errorMessageSnackBar?.dismiss()
         }
     }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onEvent(event: ScapeSessionStateEvent) {
+        Log.d(TAG, "on ScapeSessionStateEvent received")
+
+        if(activity == null) return
+        scapeSessionState = event.state
+        scapeMeasurementsStatus = event.status
+        scapeConfidenceScore = event.confidenceScore
+
+        showErrorMessage()
+
+        if(!isContinuousModeEnabled) {
+            stopSingleLocalization()
+        }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onEvent(event: TimerEvent) {
+        measuredTimeInMillis = event.timeInMillis
+
+        if (measuredTimeInMillis == 0L)
+            Log.w("Broadcastreceiver", "service returned time 0")
+        time.base = SystemClock.elapsedRealtime() - measuredTimeInMillis
+    }
+
+    // endregion EventBus
 
     // region Private
 
@@ -286,18 +294,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         view_pager.addOnPageChangeListener(this)
     }
 
-    private fun registerTraceBroadcastReceiver() {
-        Log.d(TAG, "registerBroadcastReceiver")
-        val intentFilter = IntentFilter().apply {
-            addAction(BROADCAST_ACTION_GPS_LOCATION)
-            addAction(BROADCAST_ACTION_SCAPE_LOCATION)
-            addAction(BROADCAST_ACTION_TIME)
-            addAction(BROADCAST_ACTION_MEASUREMENTS_ERROR)
-        }
-
-        activity?.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
-    }
-
     private fun startSingleShotLocalization() {
         Log.d(TAG, "startSingleShotLocalization")
 
@@ -327,15 +323,11 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         isContinuousModeEnabled = false
 
-        registerTraceBroadcastReceiver()
-
         TrackTraceManager.sharedInstance(activity!!).startUpdatingLocation(false)
     }
 
     private fun startContinuousLocalization() {
         isContinuousModeEnabled = true
-
-        registerTraceBroadcastReceiver()
 
         TrackTraceManager.sharedInstance(context!!).startUpdatingLocation(isContinuousModeEnabled)
     }
@@ -343,11 +335,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private fun stopContinuousLocalization() {
         TrackTraceManager.sharedInstance(context!!).stopUpdatingLocation(isContinuousModeEnabled)
 
-        try {
-            activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
-        } catch (e: IllegalArgumentException) {
-            Log.e("TrackTraceFrag receiver exception", e.toString())
-        }
     }
 
     private fun stopSingleLocalization() {
@@ -356,12 +343,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         view_switch_bottom?.postDelayed({view_switch_bottom?.visibility = View.VISIBLE}, 2000)
 
         TrackTraceManager.sharedInstance(context!!).stopUpdatingLocation(isContinuousModeEnabled)
-
-        try {
-            activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
-        } catch (e: IllegalArgumentException) {
-            Log.e( TAG, " exception $e")
-        }
     }
 
     private fun stopTimerAndContinuousLocalization() {
@@ -588,6 +569,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         // start client here to ensure that we have GPS updates as soon as possible
         TrackTraceManager.sharedInstance(context!!).scapeClient?.start({}, { error -> Log.e("CameraFragment", error)})
+
+        EventBus.getDefault().register(this)
     }
 
     override fun onResume() {
@@ -624,21 +607,17 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     override fun onDestroyView() {
         super.onDestroyView()
 
+        EventBus.getDefault().unregister(this)
+
         TrackTraceManager.sharedInstance(activity!!)?.scapeClient?.stop({}, {})
 
         viewFinder.removeFrameProcessor(frameProcessor)
 
-        // clean up broadcast receivers
-        try {
-            activity!!.unregisterReceiver(trackTraceBroadcastReceiver)
-        } catch (e: IllegalArgumentException) {
-            Log.e("TrackTraceFrag receiver exception", e.toString())
-        }
-
+        // clean up broadcast receiver
         try {
             activity!!.unregisterReceiver(networkConnectivityReceiver)
         } catch (e: IllegalArgumentException) {
-            Log.e("TrackTraceFrag Network receiver exception", e.toString())
+            Log.e("TrackTraceFrag", "Network receiver exception $e")
         }
 
         // clean up viewpager

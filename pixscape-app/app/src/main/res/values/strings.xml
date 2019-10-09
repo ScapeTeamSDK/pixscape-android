@@ -81,16 +81,16 @@
     <string name="my_traces">My Traces</string>
 
     <!-- Localization -->
-    <string name="localization_in_progress">Locking your position, please wait..</string>
+    <string name="localization_in_progress">Locking your position ...</string>
     <string name="localization_unavailable_area">This area is not yet available.</string>
-    <string name="localization_network_error">No network connection, please try again.</string>
-    <string name="localization_error">Could not lock your position, please try again.</string>
-    <string name="localization_sensors_error">GPS not ready yet, please try again.</string>
-    <string name="localization_generic_error">Something went wrong, please try again.</string>
-    <string name="localization_image_error">Something went wrong with your camera, please try again.</string>
+    <string name="localization_network_error">No network connection.</string>
+    <string name="localization_error">Could not lock your position.</string>
+    <string name="localization_sensors_error">GPS not ready yet.</string>
+    <string name="localization_generic_error">Something went wrong.</string>
+    <string name="localization_image_error">Something went wrong with your camera.</string>
 
     <!-- Network signal strength -->
-    <string name="network_signal_fair">Your network connection is not reliable, please try again.</string>
-    <string name="network_signal_weak">No network connection, please try again.</string>
+    <string name="network_signal_fair">Your network connection is not reliable.</string>
+    <string name="network_signal_weak">No network connection.</string>
 
 </resources>
