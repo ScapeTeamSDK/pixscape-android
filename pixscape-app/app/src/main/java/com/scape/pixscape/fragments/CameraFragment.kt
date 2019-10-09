@@ -64,8 +64,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private var miniMap: GoogleMap? = null
     private var floatingMarkerTitlesOverlay: FloatingMarkerTitlesOverlay? = null
     private var connectivitySnackBar: Snackbar? = null
-
-    private var sharedPref: SharedPreferences? = null
+    private var errorMessageSnackBar: Snackbar? = null
 
     companion object {
         private const val TAG = "CameraFragment"
@@ -74,7 +73,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         const val BROADCAST_ACTION_TIME = "com.scape.pixscape.camerafragment.broadcastreceivertime"
         const val BROADCAST_ACTION_GPS_LOCATION = "com.scape.pixscape.camerafragment.broadcastreceivergpslocation"
         const val BROADCAST_ACTION_SCAPE_LOCATION = "com.scape.pixscape.camerafragment.broadcastreceiverscapelocation"
-        const val BROADCAST_ACTION_STOP_TIMER = "com.scape.pixscape.camerafragment.broadcastreceiverstoptimer"
+        const val BROADCAST_ACTION_MEASUREMENTS_ERROR = "com.scape.pixscape.camerafragment.broadcastreceivermeasurementserror"
         const val TIME_DATA_KEY = "com.scape.pixscape.camerafragment.timedatakey"
         const val ROUTE_GPS_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routegpssectionsdatakey"
         const val ROUTE_SCAPE_SECTIONS_DATA_KEY = "com.scape.pixscape.camerafragment.routescapesectionsdatakey"
@@ -165,8 +164,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                     distanceInMeters = gpsRouteSections.sumByDouble { section -> section.distance.toDouble() }
 
                     fillMap()
-
-                    if (sharedPref == null) return
                 }
                 BROADCAST_ACTION_SCAPE_LOCATION -> {
                     if (activity == null) return
@@ -176,14 +173,17 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                     fillMap()
 
                     // if we have any scape error then the service will
-                    // trigger BROADCAST_ACTION_STOP_TIMER which effectively stops the service,
+                    // trigger BROADCAST_ACTION_MEASUREMENTS_ERROR which effectively stops the service,
                     // but if we have a succesful scape result then we need to stop the service here when in single mode
                     if(!isContinuousModeEnabled) {
                         stopSingleLocalization()
                     }
+                    else {
+                        errorMessageSnackBar?.dismiss()
+                    }
                     // don't compute metrics for scape routes
                 }
-                BROADCAST_ACTION_STOP_TIMER   -> {
+                BROADCAST_ACTION_MEASUREMENTS_ERROR   -> {
                     if(activity == null) return
                     scapeSessionState = scapeSessionStateValues[intent.getIntExtra(SCAPE_ERROR_STATE_KEY,
                                                                                    ScapeSessionState.NO_ERROR.ordinal)]
@@ -193,12 +193,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
                     showErrorMessage()
 
-                    if(isContinuousModeEnabled) {
-                        stopTimerAndContinuousLocalization()
-
-                        startTrackTraceActivity()
-                    }
-                    else {
+                    if(!isContinuousModeEnabled) {
                         stopSingleLocalization()
                     }
                 }
@@ -236,7 +231,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             } else if(timerState == TimerState.Paused) {
                 timerState = TimerState.Running
 
-                TrackTraceManager.sharedInstance(context!!).pauseTimer(false)
+                TrackTraceManager?.sharedInstance(context!!).resumeUpdatingContinuousLocation()
 
                 play_timer_button.hide()
                 stop_timer_button.visibility = View.GONE
@@ -246,7 +241,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
 
         pause_timer_button.setOnClickListener {
-            TrackTraceManager.sharedInstance(context!!).pauseTimer(true)
+            TrackTraceManager.sharedInstance(context!!).pauseUpdatingContinuousLocation()
 
             pause_timer_button.hide()
 
@@ -254,9 +249,14 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             stop_timer_button.visibility = View.VISIBLE
 
             timerState = TimerState.Paused
+
+            errorMessageSnackBar?.dismiss()
         }
 
         stop_timer_button.setOnClickListener {
+
+            errorMessageSnackBar?.dismiss()
+
             stopTimerAndContinuousLocalization()
 
             startTrackTraceActivity()
@@ -286,13 +286,13 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         view_pager.addOnPageChangeListener(this)
     }
 
-    private fun registerBroadcastReceiver() {
+    private fun registerTraceBroadcastReceiver() {
         Log.d(TAG, "registerBroadcastReceiver")
         val intentFilter = IntentFilter().apply {
             addAction(BROADCAST_ACTION_GPS_LOCATION)
             addAction(BROADCAST_ACTION_SCAPE_LOCATION)
             addAction(BROADCAST_ACTION_TIME)
-            addAction(BROADCAST_ACTION_STOP_TIMER)
+            addAction(BROADCAST_ACTION_MEASUREMENTS_ERROR)
         }
 
         activity?.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
@@ -323,11 +323,11 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         
         view_switch_bottom?.visibility = View.GONE
         dots_view?.visibility = View.VISIBLE
-        container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, 3000)
+        container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, SNACKBAR_DURATION_SHORT)
 
         isContinuousModeEnabled = false
 
-        registerBroadcastReceiver()
+        registerTraceBroadcastReceiver()
 
         TrackTraceManager.sharedInstance(activity!!).startUpdatingLocation(false)
     }
@@ -335,7 +335,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     private fun startContinuousLocalization() {
         isContinuousModeEnabled = true
 
-        registerBroadcastReceiver()
+        registerTraceBroadcastReceiver()
 
         TrackTraceManager.sharedInstance(context!!).startUpdatingLocation(isContinuousModeEnabled)
     }
@@ -408,28 +408,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             startActivity(intent)
         } catch (t: Throwable) {
             Log.e(TAG, t.toString())
-        }
-    }
-
-    private fun restoreTimerState() {
-        timerState = TimerState.values()[sharedPref!!.getInt(getString(R.string.timer_state), 0)]
-
-        when (timerState) {
-            TimerState.Idle    -> {
-                time.base = SystemClock.elapsedRealtime()
-            }
-            TimerState.Running -> {
-                time.base = SystemClock.elapsedRealtime() - measuredTimeInMillis
-
-                play_timer_button.hide()
-                pause_timer_button.show()
-            }
-            TimerState.Paused  -> {
-                time.base = SystemClock.elapsedRealtime() - measuredTimeInMillis
-
-                play_timer_button.show()
-                stop_timer_button.visibility = View.VISIBLE
-            }
         }
     }
 
@@ -548,48 +526,56 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
     }
 
+    /**
+     * In continuous mode display indefinite Snackbar until scape measurements are found.
+     * In single mode display short-lived Snackbar.
+     */
     private fun showErrorMessage() {
+        lateinit var errMessage: String
+
         when(scapeSessionState) {
-            ScapeSessionState.AUTHENTICATION_ERROR, ScapeSessionState.NETWORK_ERROR -> {
-                container.showSnackbar(getString(R.string.localization_network_error),
-                                       R.color.red,
-                                       SNACKBAR_DURATION_LONG)
+            ScapeSessionState.AUTHENTICATION_ERROR,
+            ScapeSessionState.NETWORK_ERROR -> {
+                errMessage = getString(R.string.localization_network_error)
             }
             ScapeSessionState.LOCKING_POSITION_ERROR -> {
-                var errMessage = getString(R.string.localization_error)
-
-                // check if locking cannot be achieved due to unavailable area
-                if (scapeMeasurementsStatus == ScapeMeasurementsStatus.UNAVAILABLE_AREA) {
-                    errMessage = getString(R.string.localization_unavailable_area)
-                }
-
-                container.showSnackbar(errMessage,
-                                       R.color.red,
-                                       SNACKBAR_DURATION_LONG)
+                errMessage = if (scapeMeasurementsStatus == ScapeMeasurementsStatus.UNAVAILABLE_AREA)
+                    getString(R.string.localization_unavailable_area)
+                else
+                    getString(R.string.localization_error)
             }
             ScapeSessionState.NO_ERROR                                              -> {
                 if (scapeConfidenceScore < MIN_SCAPE_CONFIDENCE_SCORE) {
-                    container.showSnackbar(getString(R.string.localization_error),
-                        R.color.red,
-                        SNACKBAR_DURATION_LONG)
+                    errMessage = getString(R.string.localization_error)
                 }
             }
             ScapeSessionState.LOCATION_SENSORS_ERROR,
             ScapeSessionState.MOTION_SENSORS_ERROR                                  -> {
-                container.showSnackbar(getString(R.string.localization_sensors_error),
-                    R.color.red,
-                    SNACKBAR_DURATION_LONG)
+                errMessage = getString(R.string.localization_sensors_error)
             }
             ScapeSessionState.IMAGE_SENSORS_ERROR                                   -> {
-                container.showSnackbar(getString(R.string.localization_image_error),
-                    R.color.red,
-                    SNACKBAR_DURATION_LONG)
+                errMessage = getString(R.string.localization_image_error)
             }
             ScapeSessionState.UNEXPECTED_ERROR                                      -> {
-                container.showSnackbar(getString(R.string.localization_generic_error),
-                    R.color.red,
-                    SNACKBAR_DURATION_LONG)
+                errMessage = getString(R.string.localization_generic_error)
             }
+        }
+
+        if (isContinuousModeEnabled) {
+            if (errorMessageSnackBar != null && errorMessageSnackBar?.isShown!!) {
+                errorMessageSnackBar?.updateSnackBarText(errMessage)
+            }
+            else {
+                errorMessageSnackBar = container.showSnackbar(errMessage,
+                    R.color.red,
+                    Snackbar.LENGTH_INDEFINITE)
+            }
+        }
+        else {
+            container.showSnackbar(errMessage,
+                R.color.red,
+                SNACKBAR_DURATION_LONG
+            )
         }
     }
 
@@ -658,11 +644,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         // clean up viewpager
         main_tab_view.resetViewPager(view_pager)
         view_pager.removeOnPageChangeListener(this)
-
-        with(sharedPref!!.edit()) {
-            putInt(getString(R.string.timer_state), timerState.ordinal)
-            commit()
-        }
     }
 
     @SuppressLint("MissingPermission")
@@ -670,9 +651,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         super.onViewCreated(view, savedInstanceState)
 
         container = view as RelativeLayout
-
-        sharedPref = activity?.getSharedPreferences(getString(R.string.preference_file_key),
-                                                    Context.MODE_PRIVATE)
 
         miniMapView = container.findViewById(R.id.mini_map_view)
         miniMapView?.onCreate(savedInstanceState)
@@ -692,24 +670,14 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             // Build UI controls and bind all camera use cases
             views()
 
-            restoreTimerState()
-
             bindings()
         }
-
-        val intentFilter = IntentFilter().apply {
-            addAction(BROADCAST_ACTION_GPS_LOCATION)
-            addAction(BROADCAST_ACTION_SCAPE_LOCATION)
-            addAction(BROADCAST_ACTION_TIME)
-            addAction(BROADCAST_ACTION_STOP_TIMER)
-        }
-        activity!!.registerReceiver(trackTraceBroadcastReceiver, intentFilter)
 
         val networkIntentFilter = IntentFilter().apply {
             addAction(BROADCAST_CONNECTIVITY_OFF)
             addAction(BROADCAST_CONNECTIVITY_ON)
         }
-        activity!!.registerReceiver(networkConnectivityReceiver, networkIntentFilter)
+        activity?.registerReceiver(networkConnectivityReceiver, networkIntentFilter)
     }
 
     // endregion Fragment

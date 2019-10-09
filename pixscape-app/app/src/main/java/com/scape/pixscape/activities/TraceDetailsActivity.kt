@@ -1,7 +1,5 @@
 package com.scape.pixscape.activities
 
-import android.content.Context
-import android.content.SharedPreferences
 import android.os.Bundle
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -9,7 +7,7 @@ import com.google.android.libraries.maps.CameraUpdateFactory
 import com.google.android.libraries.maps.GoogleMap
 import com.google.android.libraries.maps.OnMapReadyCallback
 import com.google.android.libraries.maps.SupportMapFragment
-import com.google.android.libraries.maps.model.*
+import com.google.android.libraries.maps.model.MapStyleOptions
 import com.google.maps.android.data.kml.KmlLayer
 import com.scape.pixscape.R
 import com.scape.pixscape.fragments.CameraFragment
@@ -31,7 +29,6 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
                                       GoogleMap.OnMapLoadedCallback {
 
     private var googleMap: GoogleMap? = null
-    private var sharedPref: SharedPreferences? = null
 
     private lateinit var currentDate: Date
     private var measuredTimeInMillis = 0L
@@ -109,8 +106,6 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
         currentDate = Calendar.getInstance().time
         measuredTimeInMillis = intent.getLongExtra(CameraFragment.TIME_DATA_KEY, 0L)
         launchedFromHistory = intent.getBooleanExtra(CameraFragment.MODE_DATA_KEY, true)
-
-        sharedPref = getSharedPreferences(getString(R.string.preference_file_key), Context.MODE_PRIVATE)
 
         summary_measured_time.text =
             if (measuredTimeInMillis >= 3600000)

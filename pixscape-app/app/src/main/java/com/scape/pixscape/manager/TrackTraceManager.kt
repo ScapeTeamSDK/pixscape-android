@@ -62,7 +62,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
             .withDebugSupport(true)
             .build()
 
-        scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.FILE, LogOutput.CONSOLE))
+        scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.CONSOLE))
 
         registerNetworkCallback()
     }
@@ -83,17 +83,18 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
             }
         })
     }
-    fun startUpdatingLocation(isContinuousModeEnabled: Boolean) {
-        this.isContinuousModeEnabled = isContinuousModeEnabled
 
-        timer.scheduleAtFixedRate(UpdateTimeTask(), 10, 10)
-        timer.scheduleAtFixedRate(NotifyTimer(), 1000, 500)
+    fun startUpdatingLocation(isContinuousModeEnabled: Boolean) {
+        this.isContinuousModeEnabled = true
 
         if(isDebug) {
             Toast.makeText(context,
                 "Tracking started: $isContinuousModeEnabled",
                 Toast.LENGTH_LONG).show()
         }
+
+        timer.scheduleAtFixedRate(UpdateTimeTask(), 10, 10)
+         timer.scheduleAtFixedRate(NotifyTimer(), 1000, 500)
 
         if (scapeClient != null && scapeClient?.scapeSession != null) {
             if(isContinuousModeEnabled) {
@@ -105,6 +106,18 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         }
     }
 
+    fun pauseUpdatingContinuousLocation() {
+        paused = true
+
+        scapeClient?.scapeSession?.stopFetch()
+    }
+
+    fun resumeUpdatingContinuousLocation() {
+        paused = false
+
+        scapeClient?.scapeSession?.startFetch(this)
+
+    }
     fun stopUpdatingLocation(isContinuousModeEnabled: Boolean) {
         this.isContinuousModeEnabled = isContinuousModeEnabled
 
@@ -122,10 +135,6 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         }
     }
 
-    fun pauseTimer(on: Boolean) {
-        paused = on
-    }
-
     private fun broadcastNetworkConnectivityChange(isNetworkAvailable: Boolean) {
         val intent = Intent().apply {
             action = if (isNetworkAvailable) BROADCAST_CONNECTIVITY_ON else BROADCAST_CONNECTIVITY_OFF
@@ -135,41 +144,31 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     }
 
     private fun broadcastScapeSessionState(state: ScapeSessionState) {
-        if (!isContinuousModeEnabled) {
-            val intent = Intent().apply {
-                action = CameraFragment.BROADCAST_ACTION_STOP_TIMER
-                putExtra(SCAPE_ERROR_STATE_KEY, state.ordinal)
-                putExtra(SCAPE_MEASUREMENTS_STATUS_KEY, scapeMeasurementsStatus.ordinal)
-                putExtra(SCAPE_CONFIDENCE_SCORE, scapeConfidenceScore)
-            }
 
-            context?.sendBroadcast(intent)
-
-            scapeClient?.scapeSession?.stopFetch()
+        val intent = Intent().apply {
+            action = CameraFragment.BROADCAST_ACTION_MEASUREMENTS_ERROR
+            putExtra(SCAPE_ERROR_STATE_KEY, state.ordinal)
+            putExtra(SCAPE_MEASUREMENTS_STATUS_KEY, scapeMeasurementsStatus.ordinal)
+            putExtra(SCAPE_CONFIDENCE_SCORE, scapeConfidenceScore)
         }
+
+        context?.sendBroadcast(intent)
     }
 
     private fun broadcastLocationMeasurements() {
-        val bundle = Bundle().apply {
-            putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
-        }
-
         val intent = Intent().apply {
             action = CameraFragment.BROADCAST_ACTION_GPS_LOCATION
-            putExtras(bundle)
+            putParcelableArrayListExtra(ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
         }
 
         context?.sendBroadcast(intent)
     }
 
     private fun broadcastScapeMeasurements() {
-        val bundle = Bundle().apply {
-            putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
-        }
         val intent = Intent().apply {
             action = BROADCAST_ACTION_SCAPE_LOCATION
             putExtra(SCAPE_CONFIDENCE_SCORE, scapeConfidenceScore)
-            putExtras(bundle)
+            putParcelableArrayListExtra(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
         }
 
         context?.sendBroadcast(intent)
@@ -252,9 +251,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     }
 
     override fun onScapeSessionError(session: ScapeSession?, state: ScapeSessionState, error: String) {
-        Log.d("observer"," onScapeSessionError  $state")
-
-        if (!isContinuousModeEnabled) {
+        if (!paused) {
             broadcastScapeSessionState(state)
         }
     }
@@ -351,30 +348,42 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     }
 
     private fun onScapeLocationUpdatedContinuousMode(measurements: ScapeMeasurements?) {
-        if (measurements == null || measurements.measurementsStatus != ScapeMeasurementsStatus.RESULTS_FOUND) return
         if (paused) {
             lastScapeLocation = null
             return
         }
 
-        val score = measurements.confidenceScore ?: 0.0
-        if (score < 3.0) return
+        val scapeMeasurements = measurements ?: return
 
-        val lastLocation = lastScapeLocation
+        when (scapeMeasurements.measurementsStatus) {
+            ScapeMeasurementsStatus.RESULTS_FOUND -> {
+                val score = measurements.confidenceScore ?: 0.0
+                if (score < 3.0) return
 
-        // unless it is the first location after start or resume, save section to list
-        if (lastLocation != null) {
-            val newLatLng = measurements.latLng
-            if(newLatLng != null) {
-                scapeLocations.add(RouteSection(com.scape.pixscape.models.dto.Location(lastLocation.latitude,
-                    lastLocation.longitude),
-                    com.scape.pixscape.models.dto.Location(newLatLng.latitude,
-                        newLatLng.longitude)))
+                val lastLocation = lastScapeLocation
+
+                // unless it is the first location after start or resume, save section to list
+                if (lastLocation != null) {
+                    val newLatLng = measurements.latLng
+                    if(newLatLng != null) {
+                        scapeLocations.add(RouteSection(com.scape.pixscape.models.dto.Location(lastLocation.latitude,
+                            lastLocation.longitude),
+                            com.scape.pixscape.models.dto.Location(newLatLng.latitude,
+                                newLatLng.longitude)))
+                    }
+                }
+                lastScapeLocation = measurements.latLng
+
+                broadcastScapeMeasurements()
             }
+            ScapeMeasurementsStatus.NO_RESULTS -> {
+                scapeMeasurementsStatus = ScapeMeasurementsStatus.NO_RESULTS
+            }
+            ScapeMeasurementsStatus.UNAVAILABLE_AREA -> {
+                scapeMeasurementsStatus = ScapeMeasurementsStatus.UNAVAILABLE_AREA
+            }
+            ScapeMeasurementsStatus.INTERNAL_ERROR -> {}
         }
-        lastScapeLocation = measurements.latLng
-
-        broadcastScapeMeasurements()
     }
 
     // endregion Private
