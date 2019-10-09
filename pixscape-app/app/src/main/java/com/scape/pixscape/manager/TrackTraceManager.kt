@@ -4,29 +4,26 @@
  */
 package com.scape.pixscape.manager
 
-import android.app.Notification
-import android.app.NotificationManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Bundle
-import android.os.Parcelable
+import android.net.ConnectivityManager
+import android.net.Network
 import android.util.Log
 import android.widget.Toast
-import androidx.core.app.NotificationCompat
 import com.scape.pixscape.BuildConfig
-import com.scape.pixscape.PixscapeApplication
-import com.scape.pixscape.R
-import com.scape.pixscape.activities.MainActivity
-import com.scape.pixscape.fragments.CameraFragment
-import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_ACTION_SCAPE_LOCATION
+import com.scape.pixscape.events.LocationMeasurementEvent
+import com.scape.pixscape.events.ScapeMeasurementEvent
+import com.scape.pixscape.events.ScapeSessionStateEvent
+import com.scape.pixscape.events.TimerEvent
+import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_CONNECTIVITY_OFF
+import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_CONNECTIVITY_ON
 import com.scape.pixscape.models.dto.RouteSection
-import com.scape.pixscape.services.TrackTraceService
-import com.scape.pixscape.services.TrackTraceService.Companion.ROUTE_SCAPE_SECTIONS_DATA_KEY
+import com.scape.pixscape.utils.MAX_SCAPE_CONFIDENCE_SCORE
+import com.scape.pixscape.utils.MIN_SCAPE_CONFIDENCE_SCORE
 import com.scape.scapekit.*
+import org.greenrobot.eventbus.EventBus
 import java.util.*
 import java.util.Timer
-import java.util.concurrent.TimeUnit
 
 
 class TrackTraceManager private constructor(context: Context): ScapeSessionObserver {
@@ -37,6 +34,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     var context: Context? = null
 
     private var scapeMeasurementsStatus: ScapeMeasurementsStatus = ScapeMeasurementsStatus.RESULTS_FOUND
+    private var scapeConfidenceScore = MAX_SCAPE_CONFIDENCE_SCORE
 
     private var isDebug = false
 
@@ -59,21 +57,39 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
             .withDebugSupport(true)
             .build()
 
-        scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.FILE, LogOutput.CONSOLE))
+        scapeClient?.debugSession?.setLogConfig(LogLevel.LOG_DEBUG, EnumSet.of(LogOutput.CONSOLE))
+
+        registerNetworkCallback()
+    }
+
+
+    private fun registerNetworkCallback() {
+        val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        connectivityManager.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                //take action when network connection is gained
+                Log.w("Connectivity","Network is available")
+                broadcastNetworkConnectivityChange(true)
+            }
+            override fun onLost(network: Network?) {
+                //take action when network connection is lost
+                Log.w("Connectivity", "Connection lost")
+                broadcastNetworkConnectivityChange(false)
+            }
+        })
     }
 
     fun startUpdatingLocation(isContinuousModeEnabled: Boolean) {
         this.isContinuousModeEnabled = isContinuousModeEnabled
-
-        timer.scheduleAtFixedRate(UpdateTimeTask(), 10, 10)
-        timer.scheduleAtFixedRate(UpdateNotificationTask(), 1000, 1000)
-        timer.scheduleAtFixedRate(NotifyTimer(), 1000, 500)
 
         if(isDebug) {
             Toast.makeText(context,
                 "Tracking started: $isContinuousModeEnabled",
                 Toast.LENGTH_LONG).show()
         }
+
+        timer.scheduleAtFixedRate(UpdateTimeTask(), 10, 10)
+        timer.scheduleAtFixedRate(NotifyTimer(), 1000, 500)
 
         if (scapeClient != null && scapeClient?.scapeSession != null) {
             if(isContinuousModeEnabled) {
@@ -85,6 +101,18 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         }
     }
 
+    fun pauseUpdatingContinuousLocation() {
+        paused = true
+
+        scapeClient?.scapeSession?.stopFetch()
+    }
+
+    fun resumeUpdatingContinuousLocation() {
+        paused = false
+
+        scapeClient?.scapeSession?.startFetch(this)
+
+    }
     fun stopUpdatingLocation(isContinuousModeEnabled: Boolean) {
         this.isContinuousModeEnabled = isContinuousModeEnabled
 
@@ -102,48 +130,29 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         }
     }
 
-    fun pauseTimer(on: Boolean) {
-        paused = on
-    }
-
-    private fun broadcastScapeSessionState(state: ScapeSessionState) {
-        if (!isContinuousModeEnabled) {
-            val intent = Intent().apply {
-                action = CameraFragment.BROADCAST_ACTION_STOP_TIMER
-                putExtra(TrackTraceService.SCAPE_ERROR_STATE_KEY, state.ordinal)
-                putExtra(TrackTraceService.SCAPE_MEASUREMENTS_STATUS_KEY, scapeMeasurementsStatus.ordinal)
-            }
-
-            context?.sendBroadcast(intent)
-
-            scapeClient?.scapeSession?.stopFetch()
-        }
-    }
-
-    private fun broadcastLocationMeasurements() {
-        val bundle = Bundle().apply {
-            putParcelableArrayList(TrackTraceService.ROUTE_GPS_SECTIONS_DATA_KEY, gpsLocations as ArrayList<out Parcelable>)
-        }
-
+    private fun broadcastNetworkConnectivityChange(isNetworkAvailable: Boolean) {
         val intent = Intent().apply {
-            action = CameraFragment.BROADCAST_ACTION_GPS_LOCATION
-            putExtras(bundle)
+            action = if (isNetworkAvailable) BROADCAST_CONNECTIVITY_ON else BROADCAST_CONNECTIVITY_OFF
         }
 
         context?.sendBroadcast(intent)
     }
 
-    private fun broadcastScapeMeasurements() {
-        val bundle = Bundle().apply {
-            putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, scapeLocations as ArrayList<out Parcelable>)
-        }
-        val intent = Intent().apply {
-            action = BROADCAST_ACTION_SCAPE_LOCATION
-            putExtras(bundle)
-        }
+    private fun broadcastScapeSessionStateEvent(state: ScapeSessionState) {
 
-        context?.sendBroadcast(intent)
+        EventBus.getDefault().post(ScapeSessionStateEvent(state, scapeMeasurementsStatus, scapeConfidenceScore))
 
+    }
+
+    private fun broadcastLocationMeasurementsEvent() {
+
+        EventBus.getDefault().post(LocationMeasurementEvent(gpsLocations))
+
+    }
+
+    private fun broadcastScapeMeasurementsEvent() {
+
+        EventBus.getDefault().post(ScapeMeasurementEvent(scapeLocations))
     }
 
     open class SingletonHolder<out T: Any, in A>(creator: (A) -> T) {
@@ -181,65 +190,9 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
 
     private inner class NotifyTimer : TimerTask() {
         override fun run() {
-            val intent = Intent()
-            intent.action = CameraFragment.BROADCAST_ACTION_TIME
+
             if(isContinuousModeEnabled) {
-                intent.putExtra(TrackTraceService.MILLIS_DATA_KEY, currentTimeInMillis)
-
-                context?.sendBroadcast(intent)
-            }
-
-        }
-    }
-
-    private inner class UpdateNotificationTask : TimerTask() {
-        override fun run() {
-            if (!paused) {
-
-                val notificationIntent = Intent(context, MainActivity::class.java)
-                val pendingIntent = PendingIntent.getActivity(context, 0, notificationIntent, 0)
-
-                val notification: Notification?
-                val distance: Double
-
-                if(isContinuousModeEnabled) {
-                    val timeFormatted =
-                        if (currentTimeInMillis >= 3600000)
-                            String.format(
-                                "%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(currentTimeInMillis),
-                                TimeUnit.MILLISECONDS.toMinutes(currentTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
-                                TimeUnit.MILLISECONDS.toSeconds(currentTimeInMillis) % TimeUnit.MINUTES.toSeconds(1)
-                            )
-                        else
-                            String.format(
-                                "%02d:%02d",
-                                TimeUnit.MILLISECONDS.toMinutes(currentTimeInMillis) % TimeUnit.HOURS.toMinutes(1),
-                                TimeUnit.MILLISECONDS.toSeconds(currentTimeInMillis) % TimeUnit.MINUTES.toSeconds(1)
-                            )
-
-                    // use gpsLocations instead of scapeLocations as we will probably have more of them
-                    distance = Math.round(gpsLocations.sumByDouble { section -> section.distance.toDouble() } * 100.0) / 100.0
-
-                    notification = NotificationCompat.Builder(context!!, PixscapeApplication.CHANNEL_ID)
-                        .setContentTitle(context?.getString(R.string.notification_title))
-                        .setContentText(timeFormatted.plus(" ").plus(distance.toString()))
-                        .setSmallIcon(R.drawable.ic_play_arrow)
-                        .setContentIntent(pendingIntent)
-                        .setAutoCancel(true)
-                        .build()
-                } else {
-                    // don't compute distance and time if single mode is enabled
-
-                    notification = NotificationCompat.Builder(context!!, PixscapeApplication.CHANNEL_ID)
-                        .setContentTitle(context?.getString(R.string.notification_title))
-                        .setSmallIcon(R.drawable.ic_play_arrow)
-                        .setContentIntent(pendingIntent)
-                        .setAutoCancel(true)
-                        .build()
-                }
-
-                val mNotificationManager = context?.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                mNotificationManager.notify(TrackTraceService.NOTIFICATION_ID, notification)
+                EventBus.getDefault().post(TimerEvent(currentTimeInMillis))
             }
         }
     }
@@ -274,10 +227,8 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     }
 
     override fun onScapeSessionError(session: ScapeSession?, state: ScapeSessionState, error: String) {
-        Log.d("observer"," onScapeSessionError  $state")
-
-        if (!isContinuousModeEnabled) {
-            broadcastScapeSessionState(state)
+        if (!paused) {
+            broadcastScapeSessionStateEvent(state)
         }
     }
 
@@ -290,7 +241,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     // region Private
 
     private fun onDeviceLocationUpdatedSingleMode(measurements: LocationMeasurements?) {
-        Log.d("observer"," onDeviceLocationMeasurementsUpdated  $measurements")
+        Log.d("Manager"," onDeviceLocationMeasurementsUpdated  $measurements")
         if (measurements == null) return
 
         val newLatLng = measurements.latLng
@@ -303,7 +254,7 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
                     newLatLng.longitude)))
         }
 
-        broadcastLocationMeasurements()
+        broadcastLocationMeasurementsEvent()
     }
 
     private fun onDeviceLocationUpdatedContinuousMode(measurements: LocationMeasurements?) {
@@ -330,11 +281,14 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         }
         lastGpsLocation = measurements.latLng
 
-        broadcastLocationMeasurements()
+        broadcastLocationMeasurementsEvent()
     }
 
     private fun onScapeLocationUpdatedSingleMode(measurements: ScapeMeasurements?) {
-        Log.d("observer"," onScapeMeasurementsUpdated $measurements ")
+        Log.d("Manager"," onScapeMeasurementsUpdated $measurements ")
+
+        scapeClient?.scapeSession?.stopFetch()
+
         val scapeMeasurements = measurements ?: return
 
         when(scapeMeasurements.measurementsStatus) {
@@ -345,8 +299,11 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
                 scapeMeasurementsStatus = ScapeMeasurementsStatus.UNAVAILABLE_AREA
             }
             ScapeMeasurementsStatus.RESULTS_FOUND -> {
-                val score = scapeMeasurements.confidenceScore ?: 0.0
-                if(score < 3.0) {
+                scapeConfidenceScore = scapeMeasurements.confidenceScore ?: MAX_SCAPE_CONFIDENCE_SCORE
+
+                if(scapeConfidenceScore < MIN_SCAPE_CONFIDENCE_SCORE) {
+
+                    broadcastScapeSessionStateEvent(ScapeSessionState.NO_ERROR)
                     return
                 }
 
@@ -360,39 +317,53 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
                             newLatLng.longitude)))
                 }
 
-                broadcastScapeMeasurements()
+                broadcastScapeMeasurementsEvent()
             }
-            ScapeMeasurementsStatus.INTERNAL_ERROR -> {}
+            ScapeMeasurementsStatus.INTERNAL_ERROR -> {
+                broadcastScapeSessionStateEvent(ScapeSessionState.UNEXPECTED_ERROR)
+            }
         }
-
-        scapeClient?.scapeSession?.stopFetch()
     }
 
     private fun onScapeLocationUpdatedContinuousMode(measurements: ScapeMeasurements?) {
-        if (measurements == null || measurements.measurementsStatus != ScapeMeasurementsStatus.RESULTS_FOUND) return
         if (paused) {
             lastScapeLocation = null
             return
         }
 
-        val score = measurements.confidenceScore ?: 0.0
-        if (score < 3.0) return
+        val scapeMeasurements = measurements ?: return
 
-        val lastLocation = lastScapeLocation
+        when (scapeMeasurements.measurementsStatus) {
+            ScapeMeasurementsStatus.RESULTS_FOUND -> {
+                val score = measurements.confidenceScore ?: 0.0
+                if (score < 3.0) return
 
-        // unless it is the first location after start or resume, save section to list
-        if (lastLocation != null) {
-            val newLatLng = measurements.latLng
-            if(newLatLng != null) {
-                scapeLocations.add(RouteSection(com.scape.pixscape.models.dto.Location(lastLocation.latitude,
-                    lastLocation.longitude),
-                    com.scape.pixscape.models.dto.Location(newLatLng.latitude,
-                        newLatLng.longitude)))
+                val lastLocation = lastScapeLocation
+
+                // unless it is the first location after start or resume, save section to list
+                if (lastLocation != null) {
+                    val newLatLng = measurements.latLng
+                    if(newLatLng != null) {
+                        scapeLocations.add(RouteSection(com.scape.pixscape.models.dto.Location(lastLocation.latitude,
+                            lastLocation.longitude),
+                            com.scape.pixscape.models.dto.Location(newLatLng.latitude,
+                                newLatLng.longitude)))
+                    }
+                }
+                lastScapeLocation = measurements.latLng
+
+                broadcastScapeMeasurementsEvent()
+            }
+            ScapeMeasurementsStatus.NO_RESULTS -> {
+                scapeMeasurementsStatus = ScapeMeasurementsStatus.NO_RESULTS
+            }
+            ScapeMeasurementsStatus.UNAVAILABLE_AREA -> {
+                scapeMeasurementsStatus = ScapeMeasurementsStatus.UNAVAILABLE_AREA
+            }
+            ScapeMeasurementsStatus.INTERNAL_ERROR -> {
+                scapeMeasurementsStatus = ScapeMeasurementsStatus.INTERNAL_ERROR
             }
         }
-        lastScapeLocation = measurements.latLng
-
-        broadcastScapeMeasurements()
     }
 
     // endregion Private

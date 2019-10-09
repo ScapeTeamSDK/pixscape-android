@@ -15,4 +15,5 @@ fun downloadKmlFileAsync() = GlobalScope.async {
     ByteArrayInputStream(response.body?.string()?.toByteArray(Charsets.UTF_8))
 }
 
-
+const val MAX_SCAPE_CONFIDENCE_SCORE = 5.0
+const val MIN_SCAPE_CONFIDENCE_SCORE = 3.0
