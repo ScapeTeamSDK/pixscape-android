@@ -148,6 +148,9 @@ public abstract class CameraEngine implements
     @SuppressWarnings({"WeakerAccess", "unused"})
     public static final int STATE_STARTING = Step.STATE_STARTING;
     public static final int STATE_STARTED = Step.STATE_STARTED;
+    // Camera preview size
+    public static final int MIN_PREVIEW_STREAM_WIDTH = 640;
+    public static final int MIN_PREVIEW_STREAM_HEIGHT = 480;
 
     // Need to be protected
     @SuppressWarnings("WeakerAccess") protected WorkerHandler mHandler;
@@ -1335,7 +1338,7 @@ public abstract class CameraEngine implements
             selector = mVideoSizeSelector;
             sizes = mCameraOptions.getSupportedVideoSizes();
         }
-        selector = SizeSelectors.or(selector, SizeSelectors.biggest());
+        selector = SizeSelectors.or(selector, SizeSelectors.smallest());
         List<Size> list = new ArrayList<>(sizes);
         Size result = selector.select(list).get(0);
         if (!list.contains(result)) {
@@ -1369,7 +1372,7 @@ public abstract class CameraEngine implements
 
         // Create our own default selector, which will be used if the external mPreviewStreamSizeSelector
         // is null, or if it fails in finding a size.
-        Size targetMinSize = getPreviewSurfaceSize(Reference.VIEW);
+        Size targetMinSize = new Size(MIN_PREVIEW_STREAM_WIDTH, MIN_PREVIEW_STREAM_HEIGHT);
         if (targetMinSize == null) throw new IllegalStateException("targetMinSize should not be null here.");
         AspectRatio targetRatio = AspectRatio.of(mCaptureSize.getWidth(), mCaptureSize.getHeight());
         if (flip) targetRatio = targetRatio.flip();
@@ -1385,7 +1388,7 @@ public abstract class CameraEngine implements
                 SizeSelectors.and(matchRatio, matchSize), // Try to respect both constraints.
                 matchSize, // If couldn't match aspect ratio, at least respect the size
                 matchRatio, // If couldn't respect size, at least match aspect ratio
-                SizeSelectors.biggest() // If couldn't match any, take the biggest.
+                SizeSelectors.smallest() // If couldn't match any, take the smallest.
         );
 
         // Apply the external selector with this as a fallback,
