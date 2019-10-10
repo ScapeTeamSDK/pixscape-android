@@ -14,7 +14,7 @@ android {
         applicationId "com.scape.pixscape"
         minSdkVersion 24
         targetSdkVersion 28
-        versionCode 13
+        versionCode 14
         versionName "2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -72,7 +72,7 @@ dependencies {
     kapt 'org.jetbrains.kotlin:kotlin-compiler-embeddable:1.3.11'
 
     // ScapeKit
-    implementation project(path: ':scapekit-core-1.0.7')
+    implementation 'com.scape:scapekit-core:1.0.7@aar'
 
     // Support UI
     implementation 'com.google.android.material:material:1.0.0'
