@@ -62,7 +62,7 @@ import kotlin.experimental.and
 enum class TimerState { Idle, Running, Paused }
 
 internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener,
-                                ViewPager.OnPageChangeListener {
+    ViewPager.OnPageChangeListener {
 
     private var luma: ByteBuffer? = null
     private var cameraIntrinsics: CameraIntrinsics? = null
@@ -122,9 +122,9 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             val scapeClient = TrackTraceManager.sharedInstance(context!!).scapeClient
 
             scapeClient?.scapeSession?.setCameraIntrinsics(intrinsics.focalLengthX,
-                                                           intrinsics.focalLengthY,
-                                                           intrinsics.principalPointX,
-                                                           intrinsics.principalPointY)
+                intrinsics.focalLengthY,
+                intrinsics.principalPointX,
+                intrinsics.principalPointY)
             val byteBuffer = luma
             if(byteBuffer != null) {
                 scapeClient?.scapeSession?.setByteBuffer(byteBuffer, width, height)
@@ -212,6 +212,10 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     // region Private
 
     private fun bindings() {
+        viewFinder.setLifecycleOwner(this)
+
+        viewFinder.addFrameProcessor(frameProcessor)
+
         card_view_minimap_container.setOnClickListener {
             view_pager.currentItem = 2
         }
@@ -316,7 +320,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             }
             else -> {}
         }
-        
+
         view_switch_bottom?.visibility = View.GONE
         dots_view?.visibility = View.VISIBLE
         container.showSnackbar("Locking your position, please wait..", R.color.scape_blue, SNACKBAR_DURATION_SHORT)
@@ -383,9 +387,9 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             }
 
             val intent = Intent(activity!!, TraceDetailsActivity::class.java)
-                    .putExtra(TIME_DATA_KEY, measuredTimeInMillis)
-                    .putExtras(bundle)
-                    .putExtra(MODE_DATA_KEY, false)
+                .putExtra(TIME_DATA_KEY, measuredTimeInMillis)
+                .putExtras(bundle)
+                .putExtra(MODE_DATA_KEY, false)
             startActivity(intent)
         } catch (t: Throwable) {
             Log.e(TAG, t.toString())
@@ -394,7 +398,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
     @SuppressLint("MissingPermission")
     private fun setupMiniMap() {
-        floatingMarkerTitlesOverlay?.setSource(miniMap)
 
         miniMapView?.isClickable = false
 
@@ -424,16 +427,16 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
 
         LocationServices.getFusedLocationProviderClient(activity!!)
-                .lastLocation
-                .addOnSuccessListener { location: Location? ->
-                    location?.let {
-                        val position = CameraPosition.Builder()
-                                .target(LatLng(it.latitude, it.longitude))
-                                .zoom(15.0f)
-                                .build()
-                        miniMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))
-                    }
+            .lastLocation
+            .addOnSuccessListener { location: Location? ->
+                location?.let {
+                    val position = CameraPosition.Builder()
+                        .target(LatLng(it.latitude, it.longitude))
+                        .zoom(15.0f)
+                        .build()
+                    miniMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))
                 }
+            }
 
 
         val waterMark: View = miniMapView?.findViewWithTag("GoogleWatermark") ?: return
@@ -446,6 +449,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     private fun fillMap() {
+        floatingMarkerTitlesOverlay?.setSource(miniMap)
+
         try {
             floatingMarkerTitlesOverlay?.clearMarkers()
             miniMap?.clear()
@@ -456,54 +461,54 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         for (i in 0 until gpsRouteSections.size) {
             miniMap?.placeMarker(gpsRouteSections[i].beginning.toLatLng(),
-                                 resources,
-                                 R.drawable.circle_marker,
-                                 R.color.color_primary_dark)
+                resources,
+                R.drawable.circle_marker,
+                R.color.color_primary_dark)
             miniMap?.placeMarker(gpsRouteSections[i].end.toLatLng(),
-                                 resources,
-                                 R.drawable.circle_marker,
-                                 R.color.color_primary_dark)
+                resources,
+                R.drawable.circle_marker,
+                R.color.color_primary_dark)
         }
 
         if (gpsRouteSections.isNotEmpty()) {
             miniMap?.placeMarker(gpsRouteSections.last().end.toLatLng(),
-                                resources,
-                                R.drawable.gps_user_location,
-                                R.color.color_primary_dark)
+                resources,
+                R.drawable.gps_user_location,
+                R.color.color_primary_dark)
 
             floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
-                                                   MarkerInfo(gpsRouteSections.last().end.toLatLng(),
-                                                              "GPS",
-                                                              Color.BLACK))
+                MarkerInfo(gpsRouteSections.last().end.toLatLng(),
+                    "GPS",
+                    Color.BLACK))
 
             miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
-                                                                     18f))
+                18f))
         }
 
         for (i in 0 until scapeRouteSections.size) {
             miniMap?.placeMarker(scapeRouteSections[i].beginning.toLatLng(),
-                                resources,
-                                R.drawable.circle_marker,
-                                R.color.scape_color)
+                resources,
+                R.drawable.circle_marker,
+                R.color.scape_color)
             miniMap?.placeMarker(scapeRouteSections[i].end.toLatLng(),
-                                resources,
-                                R.drawable.circle_marker,
-                                R.color.scape_color)
+                resources,
+                R.drawable.circle_marker,
+                R.color.scape_color)
         }
 
         if (scapeRouteSections.isNotEmpty()) {
             miniMap?.placeMarker(scapeRouteSections.last().end.toLatLng(),
-                                resources,
-                                R.drawable.gps_user_location,
-                                R.color.scape_color)
+                resources,
+                R.drawable.gps_user_location,
+                R.color.scape_color)
 
             floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
-                                                   MarkerInfo(scapeRouteSections.last().end.toLatLng(),
-                                                              "SCAPE",
-                                                              Color.BLACK))
+                MarkerInfo(scapeRouteSections.last().end.toLatLng(),
+                    "SCAPE",
+                    Color.BLACK))
 
             miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
-                                                                     18f))
+                18f))
         }
     }
 
@@ -640,9 +645,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         floatingMarkerTitlesOverlay = container.findViewById(R.id.map_floating_markers_overlay)
 
         viewFinder = container.findViewById(R.id.view_finder)
-        viewFinder.setLifecycleOwner(this)
-
-        viewFinder.addFrameProcessor(frameProcessor)
 
         // Wait for the views to be properly laid out
         viewFinder.post {
@@ -686,7 +688,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 card_view_minimap_container.visibility = View.GONE
             }
             1 -> {
-                view_finder.visibility = View.VISIBLE
+                view_finder?.visibility = View.VISIBLE
                 full_map_view.visibility = View.GONE
 
                 main_view.setBackgroundColor(colorWhite)
@@ -717,7 +719,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 }
             }
             2-> {
-                view_finder.visibility = View.GONE
+                view_finder?.visibility = View.GONE
 
                 // hide all play/pause/stop buttons, timer and minimap when not on main screen
                 play_timer_button.hide()

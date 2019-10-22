@@ -62,7 +62,6 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         registerNetworkCallback()
     }
 
-
     private fun registerNetworkCallback() {
         val connectivityManager = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
         connectivityManager.registerDefaultNetworkCallback(object : ConnectivityManager.NetworkCallback() {
@@ -141,13 +140,11 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     private fun broadcastScapeSessionStateEvent(state: ScapeSessionState) {
 
         EventBus.getDefault().post(ScapeSessionStateEvent(state, scapeMeasurementsStatus, scapeConfidenceScore))
-
     }
 
     private fun broadcastLocationMeasurementsEvent() {
 
         EventBus.getDefault().post(LocationMeasurementEvent(gpsLocations))
-
     }
 
     private fun broadcastScapeMeasurementsEvent() {
