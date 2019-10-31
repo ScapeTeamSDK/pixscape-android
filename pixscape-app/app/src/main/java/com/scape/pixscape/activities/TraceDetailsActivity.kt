@@ -14,8 +14,7 @@ import com.scape.pixscape.fragments.CameraFragment
 import com.scape.pixscape.models.dto.GpsTrace
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.models.dto.ScapeTrace
-import com.scape.pixscape.utils.downloadKmlFileAsync
-import com.scape.pixscape.utils.placeMarker
+import com.scape.pixscape.utils.*
 import com.scape.pixscape.viewmodels.TraceViewModel
 import com.scape.pixscape.viewmodels.TraceViewModelFactory
 import kotlinx.android.synthetic.main.activity_trace_details.*
@@ -43,51 +42,13 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
     }
 
     private fun fillMap() {
-        try {
-            googleMap?.clear()
 
-            val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json)
-            googleMap?.setMapStyle(mapStyleOptions)
-
-            GlobalScope.launch(Dispatchers.Main) {
-                try {
-                    val layer = KmlLayer(googleMap, downloadKmlFileAsync().await(), applicationContext)
-                    layer.addLayerToMap()
-                } catch (ex: Exception) {
-                    Log.e("downloadKmlFileAsync", "cannot download $ex")
-                }
-
-            }
-        } catch (ex: UninitializedPropertyAccessException) {
-            Log.w("Google map", "fillMap() invoked with uninitialized googleMap")
-            return
-        }
-
-        for (i in 0 until gpsRouteSections.size) {
-            googleMap?.placeMarker(gpsRouteSections[i].beginning.toLatLng(),
-                                    resources,
-                                    R.drawable.circle_marker,
-                                    R.color.color_primary_dark)
-            googleMap?.placeMarker(gpsRouteSections[i].end.toLatLng(),
-                                    resources,
-                                    R.drawable.circle_marker,
-                                    R.color.color_primary_dark)
-        }
-
-        for (i in 0 until scapeRouteSections.size) {
-            googleMap?.placeMarker(scapeRouteSections[i].beginning.toLatLng(),
-                                    resources,
-                                    R.drawable.circle_marker,
-                                    R.color.scape_color)
-            googleMap?.placeMarker(scapeRouteSections[i].end.toLatLng(),
-                                   resources,
-                                   R.drawable.circle_marker,
-                                   R.color.scape_color)
-        }
+        googleMap?.fillMap(resources, gpsRouteSections, scapeRouteSections)
 
         if (gpsRouteSections.isNotEmpty()) {
-            googleMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(), 18f))
+            googleMap?.animate(gpsRouteSections.last().end.toLatLng())
         }
+
     }
 
     // region Activity
@@ -171,6 +132,19 @@ internal class TraceDetailsActivity : AppCompatActivity(), OnMapReadyCallback,
             } else {
                 googleMap?.mapType = GoogleMap.MAP_TYPE_NORMAL
             }
+        }
+
+        val mapStyleOptions = MapStyleOptions.loadRawResourceStyle(this, R.raw.style_json)
+        googleMap?.setMapStyle(mapStyleOptions)
+
+        GlobalScope.launch(Dispatchers.Main) {
+            try {
+                val layer = KmlLayer(googleMap, downloadKmlFileAsync().await(), applicationContext)
+                layer.addLayerToMap()
+            } catch (ex: Exception) {
+                Log.e("downloadKmlFileAsync", "cannot download $ex")
+            }
+
         }
 
         fillMap()

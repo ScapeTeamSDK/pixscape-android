@@ -114,8 +114,8 @@
 
     <ImageView
         android:id="@+id/view_circle_invisible_bottom"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="@dimen/circle_size"
+        android:layout_height="@dimen/circle_size"
         android:layout_gravity="center|bottom"
         android:layout_marginBottom="20dp"
         app:srcCompat="@drawable/small_circle_image"

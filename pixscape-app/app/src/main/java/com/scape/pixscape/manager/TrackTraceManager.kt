@@ -11,10 +11,7 @@ import android.net.Network
 import android.util.Log
 import android.widget.Toast
 import com.scape.pixscape.BuildConfig
-import com.scape.pixscape.events.LocationMeasurementEvent
-import com.scape.pixscape.events.ScapeMeasurementEvent
-import com.scape.pixscape.events.ScapeSessionStateEvent
-import com.scape.pixscape.events.TimerEvent
+import com.scape.pixscape.events.*
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_CONNECTIVITY_OFF
 import com.scape.pixscape.fragments.CameraFragment.Companion.BROADCAST_CONNECTIVITY_ON
 import com.scape.pixscape.models.dto.RouteSection
@@ -90,6 +87,13 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
         timer.scheduleAtFixedRate(UpdateTimeTask(), 10, 10)
         timer.scheduleAtFixedRate(NotifyTimer(), 1000, 500)
 
+        if (isContinuousModeEnabled) {
+            gpsLocations = ArrayList()
+            scapeLocations = ArrayList()
+
+            broadcastNewTraceEvent()
+        }
+
         if (scapeClient != null && scapeClient?.scapeSession != null) {
             if(isContinuousModeEnabled) {
                 scapeClient?.scapeSession?.startFetch(this)
@@ -127,6 +131,11 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
                 "Tracking stopped. GPS Locations: ${gpsLocations.size} Scape Locations: ${scapeLocations.size}",
                 Toast.LENGTH_LONG).show()
         }
+
+        if (isContinuousModeEnabled) {
+            broadcastNewTraceEvent()
+        }
+
     }
 
     private fun broadcastNetworkConnectivityChange(isNetworkAvailable: Boolean) {
@@ -143,13 +152,21 @@ class TrackTraceManager private constructor(context: Context): ScapeSessionObser
     }
 
     private fun broadcastLocationMeasurementsEvent() {
+        Log.d("manager", "broadcastLocationMeasurementsEvent")
 
         EventBus.getDefault().post(LocationMeasurementEvent(gpsLocations))
     }
 
     private fun broadcastScapeMeasurementsEvent() {
+        Log.d("manager", "ScapeMeasurementEvent")
 
         EventBus.getDefault().post(ScapeMeasurementEvent(scapeLocations))
+    }
+
+    private fun broadcastNewTraceEvent() {
+        Log.d("manager", "broadcastNewTraceEvent")
+
+        EventBus.getDefault().post(TimerStopEvent())
     }
 
     open class SingletonHolder<out T: Any, in A>(creator: (A) -> T) {

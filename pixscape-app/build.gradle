@@ -6,6 +6,7 @@ buildscript {
     ext.kotlin_coroutines = '1.3.0'
     ext.espresso = '3.2.0'
     ext.event_bus = '3.1.1'
+    ext.preference_version = '1.1.0'
 
     repositories {
         google()
@@ -33,4 +34,3 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
-

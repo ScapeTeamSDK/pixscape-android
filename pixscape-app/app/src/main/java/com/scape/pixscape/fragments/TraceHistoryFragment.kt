@@ -1,5 +1,6 @@
 package com.scape.pixscape.fragments
 
+import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
@@ -12,6 +13,8 @@ import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.scape.pixscape.R
+import com.scape.pixscape.activities.PreferenceActivity
+import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.TraceHistoryAdapter
 import com.scape.pixscape.models.dto.GpsTrace
 import com.scape.pixscape.models.dto.ScapeTrace
@@ -93,6 +96,13 @@ internal class TraceHistoryFragment : Fragment() {
             trace_history_list.addItemDecoration(getSectionCallback())
         }
         trace_history_list.adapter = adapter
+
+        traces_settings.setColorFilter(R.color.scape_blue)
+
+        traces_settings.setOnClickListener{
+            val intent = Intent(activity!!, PreferenceActivity::class.java)
+            startActivity(intent)
+        }
     }
 
     private fun getSectionCallback(): RecyclerSectionItemDecoration.SectionCallback {
