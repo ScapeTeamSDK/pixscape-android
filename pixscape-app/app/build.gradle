@@ -14,7 +14,7 @@ android {
         applicationId "com.scape.pixscape"
         minSdkVersion 24
         targetSdkVersion 28
-        versionCode 15
+        versionCode 16
         versionName "2.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -127,6 +127,8 @@ dependencies {
     // Http
     implementation "com.squareup.okhttp3:okhttp:4.1.1"
 
+    // Preference screen
+    implementation "androidx.preference:preference:$preference_version"
     // Testing
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'androidx.test:runner:1.2.0'

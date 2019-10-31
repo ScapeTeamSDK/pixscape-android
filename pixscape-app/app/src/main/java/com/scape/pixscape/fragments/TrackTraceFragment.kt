@@ -21,8 +21,11 @@ import com.google.maps.android.data.kml.KmlLayer
 import com.scape.pixscape.R
 import com.scape.pixscape.events.LocationMeasurementEvent
 import com.scape.pixscape.events.ScapeMeasurementEvent
+import com.scape.pixscape.events.TimerStopEvent
 import com.scape.pixscape.models.dto.RouteSection
+import com.scape.pixscape.utils.animate
 import com.scape.pixscape.utils.downloadKmlFileAsync
+import com.scape.pixscape.utils.fillMapAndPlaceUserLocation
 import com.scape.pixscape.utils.placeMarker
 import kotlinx.android.synthetic.main.fragment_track_trace.*
 import kotlinx.coroutines.Dispatchers
@@ -40,10 +43,13 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         private const val TAG = "TrackTraceFrag"
         private var gpsRouteSections: List<RouteSection> = ArrayList()
         private var scapeRouteSections: List<RouteSection> = ArrayList()
+        private var gpsUserLocationMarker: Marker? = null
+        private var scapeUserLocationMarker: Marker? = null
     }
 
     // region EventBus
 
+    // The event holds all the gps routes
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onEvent(event: LocationMeasurementEvent) {
         Log.d(TAG, "LocationMeasurementEvent")
@@ -53,9 +59,10 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
 
         gpsRouteSections = event.gpsLocations
 
-        fillMap()
+        updateMapWithGpsRouteSection(gpsRouteSections.last())
     }
 
+    // The event contains all the scape routes
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onEvent(event: ScapeMeasurementEvent) {
         Log.d(TAG, "ScapeMeasurementEvent")
@@ -65,7 +72,17 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
 
         scapeRouteSections = event.scapeLocations
 
-        fillMap()
+        updateMapWithScapeRouteSection(scapeRouteSections.last())
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    fun onEvent(event: TimerStopEvent) {
+        Log.d(TAG, "TimerStopEvent")
+
+        if (activity == null) return
+        if(context == null) return
+
+        clearMapForNewTrace()
     }
 
     // endregion EventBus
@@ -123,55 +140,91 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
                 }
     }
 
-    private fun fillMap() {
+    private fun clearMapForNewTrace() {
+
+        gpsRouteSections = ArrayList()
+        scapeRouteSections = ArrayList()
+
         try {
             fullMap.clear()
         } catch (ex: UninitializedPropertyAccessException) {
             Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
-            return
         }
 
-        for (i in 0 until gpsRouteSections.size) {
-            fullMap.placeMarker(gpsRouteSections[i].beginning.toLatLng(),
-                                resources,
-                                R.drawable.circle_marker,
-                                R.color.color_primary_dark)
-            fullMap.placeMarker(gpsRouteSections[i].end.toLatLng(),
-                                resources,
-                                R.drawable.circle_marker,
-                                R.color.color_primary_dark)
+        GlobalScope.launch(Dispatchers.Main) {
+            try {
+                val layer = KmlLayer(fullMap, downloadKmlFileAsync().await(), context)
+                layer.addLayerToMap()
+            } catch (ex: Exception) {
+                Log.e(TAG, "downloadKmlFileAsync failed, reason: $ex")
+            }
         }
+    }
 
+    /**
+     * Update map with latest GPS markers.
+     */
+    private fun updateMapWithGpsRouteSection(gpsRouteSection: RouteSection) {
+        Log.d(TAG, "updateMapWithGpsRouteSection")
+
+        fullMap.placeMarker(gpsRouteSection.beginning.toLatLng(),
+            resources,
+            R.drawable.circle_marker,
+            R.color.color_primary_dark)
+
+        fullMap.placeMarker(gpsRouteSection.end.toLatLng(),
+            resources,
+            R.drawable.circle_marker,
+            R.color.color_primary_dark)
+
+        // update gps user location
         if (gpsRouteSections.isNotEmpty()) {
-            fullMap.placeMarker(gpsRouteSections.last().end.toLatLng(),
-                                resources,
-                                R.drawable.gps_user_location,
-                                R.color.color_primary_dark)
+            gpsUserLocationMarker?.remove()
 
-            fullMap.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
-                                                                    18f))
+            gpsUserLocationMarker = fullMap.placeMarker(gpsRouteSection.end.toLatLng(),
+                resources,
+                R.drawable.gps_user_location,
+                R.color.color_primary_dark)
         }
+    }
 
-        for (i in 0 until scapeRouteSections.size) {
-            fullMap.placeMarker(scapeRouteSections[i].beginning.toLatLng(),
-                                resources,
-                                R.drawable.circle_marker,
-                                R.color.scape_color)
-            fullMap.placeMarker(scapeRouteSections[i].end.toLatLng(),
-                                resources,
-                                R.drawable.circle_marker,
-                                R.color.scape_color)
-        }
+    /**
+     * Update map with latest Scape markers.
+     */
+    private fun updateMapWithScapeRouteSection(scapeRouteSection: RouteSection) {
+        Log.d(TAG, "updateMapWithScapeRouteSection")
 
+        fullMap.placeMarker(scapeRouteSection.beginning.toLatLng(),
+            resources,
+            R.drawable.circle_marker,
+            R.color.scape_color)
+
+        fullMap.placeMarker(scapeRouteSection.end.toLatLng(),
+            resources,
+            R.drawable.circle_marker,
+            R.color.scape_color)
+
+        // Update scape user location
         if (scapeRouteSections.isNotEmpty()) {
-            fullMap.placeMarker(scapeRouteSections.last().end.toLatLng(),
-                                resources,
-                                R.drawable.gps_user_location,
-                                R.color.scape_color)
+            scapeUserLocationMarker?.remove()
 
-            fullMap.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
-                                                                    18f))
+            scapeUserLocationMarker = fullMap.placeMarker(scapeRouteSection.end.toLatLng(),
+                resources,
+                R.drawable.gps_user_location,
+                R.color.scape_color)
+
+            fullMap.animate(scapeRouteSection.end.toLatLng())
         }
+    }
+
+    /**
+     * Fill map with all the markers.
+     */
+    private fun recreateMap() {
+
+        gpsRouteSections = ArrayList()
+        scapeRouteSections = ArrayList()
+        fullMap.fillMapAndPlaceUserLocation(resources, gpsRouteSections, scapeRouteSections)
     }
 
     // endregion
@@ -206,7 +259,6 @@ internal class TrackTraceFragment : Fragment(), OnMapReadyCallback, GoogleMap.On
         return inflater.inflate(R.layout.fragment_track_trace, container, false)
     }
 
-    @SuppressLint("SetTextI18n")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 

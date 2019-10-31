@@ -27,6 +27,7 @@
     <dimen name="empty_trace_history_margin_small">4dp</dimen>
     <dimen name="empty_trace_history_text_size">20sp</dimen>
     <dimen name="summary_card_margin_bottom">32dp</dimen>
+    <dimen name="circle_size">32dp</dimen>
 
     <!--timeline dimens-->
 

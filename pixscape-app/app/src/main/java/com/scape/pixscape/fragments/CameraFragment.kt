@@ -34,10 +34,7 @@ import com.scape.pixscape.R
 import com.scape.pixscape.activities.MainActivity
 import com.scape.pixscape.activities.TraceDetailsActivity
 import com.scape.pixscape.adapter.ViewPagerAdapter
-import com.scape.pixscape.events.LocationMeasurementEvent
-import com.scape.pixscape.events.ScapeMeasurementEvent
-import com.scape.pixscape.events.ScapeSessionStateEvent
-import com.scape.pixscape.events.TimerEvent
+import com.scape.pixscape.events.*
 import com.scape.pixscape.manager.TrackTraceManager
 import com.scape.pixscape.models.dto.RouteSection
 import com.scape.pixscape.utils.*
@@ -90,9 +87,10 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         private var timerState = TimerState.Idle
         private var measuredTimeInMillis = 0L
-        private var distanceInMeters = 0.0
         private var gpsRouteSections: List<RouteSection> = ArrayList()
         private var scapeRouteSections: List<RouteSection> = ArrayList()
+        private var gpsUserLocationMarker: Marker? = null
+        private var scapeUserLocationMarker: Marker? = null
         private var scapeSessionState: ScapeSessionState = ScapeSessionState.NO_ERROR
         private var scapeMeasurementsStatus: ScapeMeasurementsStatus = ScapeMeasurementsStatus.RESULTS_FOUND
         private var scapeConfidenceScore = 0.0
@@ -117,7 +115,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         val intrinsics = cameraIntrinsics
         if (intrinsics != null) {
-            //Log.e("frameProcessor", "$intrinsics $width $height")
+//            Log.e("frameProcessor", "$intrinsics $width $height")
 
             val scapeClient = TrackTraceManager.sharedInstance(context!!).scapeClient
 
@@ -156,20 +154,18 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         if (activity == null) return
         gpsRouteSections = event.gpsLocations
 
-        distanceInMeters = gpsRouteSections.sumByDouble { section -> section.distance.toDouble() }
-
-        fillMap()
+        updateMapWithGpsRouteSection(gpsRouteSections.last())
     }
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onEvent(event: ScapeMeasurementEvent) {
-        Log.d(TAG, "on ScapeMeasurementEvent received")
+        Log.d(TAG, "ScapeMeasurementEvent")
 
         if (activity == null) return
 
         scapeRouteSections = event.scapeLocations
 
-        fillMap()
+        updateMapWithScapeRouteSection(scapeRouteSections.last())
 
         // if we have any scape error then the service will
         // trigger BROADCAST_ACTION_MEASUREMENTS_ERROR which effectively stops the service,
@@ -184,7 +180,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
     @Subscribe(threadMode = ThreadMode.MAIN)
     fun onEvent(event: ScapeSessionStateEvent) {
-        Log.d(TAG, "on ScapeSessionStateEvent received")
+        Log.d(TAG, "ScapeSessionStateEvent")
 
         if(activity == null) return
         scapeSessionState = event.state
@@ -243,7 +239,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             } else if(timerState == TimerState.Paused) {
                 timerState = TimerState.Running
 
-                TrackTraceManager?.sharedInstance(context!!).resumeUpdatingContinuousLocation()
+                TrackTraceManager.sharedInstance(context!!).resumeUpdatingContinuousLocation()
 
                 play_timer_button.hide()
                 stop_timer_button.visibility = View.GONE
@@ -272,6 +268,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             stopTimerAndContinuousLocalization()
 
             startTrackTraceActivity()
+
+            clearMapForNewTrace()
         }
     }
 
@@ -309,14 +307,11 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
                 container.showSnackbar(getString(R.string.network_signal_weak),
                     R.color.red,
                     SNACKBAR_DURATION_LONG)
-                return
-
             }
             NetworkSignalStrength.Fair -> {
                 container.showSnackbar(getString(R.string.network_signal_fair),
                     R.color.red,
                     SNACKBAR_DURATION_LONG)
-                return
             }
             else -> {}
         }
@@ -337,6 +332,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     private fun stopContinuousLocalization() {
+
         TrackTraceManager.sharedInstance(context!!).stopUpdatingLocation(isContinuousModeEnabled)
 
     }
@@ -351,8 +347,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
     private fun stopTimerAndContinuousLocalization() {
         timerState = TimerState.Idle
-
-        miniMap?.clear()
 
         time?.base = SystemClock.elapsedRealtime()
 
@@ -375,12 +369,6 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
             if (localGpsRouteSections.size <= 2) return // do not show TraceDetailsActivity if we do not have enough traces
 
-            gpsRouteSections = ArrayList()
-            scapeRouteSections = ArrayList()
-
-            floatingMarkerTitlesOverlay?.clearMarkers()
-            miniMap?.clear()
-
             val bundle = Bundle().apply {
                 putParcelableArrayList(ROUTE_GPS_SECTIONS_DATA_KEY, localGpsRouteSections)
                 putParcelableArrayList(ROUTE_SCAPE_SECTIONS_DATA_KEY, localScapeRouteSections)
@@ -396,8 +384,8 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
     }
 
-    @SuppressLint("MissingPermission")
     private fun setupMiniMap() {
+        floatingMarkerTitlesOverlay?.setSource(miniMap)
 
         miniMapView?.isClickable = false
 
@@ -426,17 +414,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             }
         }
 
-        LocationServices.getFusedLocationProviderClient(activity!!)
-            .lastLocation
-            .addOnSuccessListener { location: Location? ->
-                location?.let {
-                    val position = CameraPosition.Builder()
-                        .target(LatLng(it.latitude, it.longitude))
-                        .zoom(15.0f)
-                        .build()
-                    miniMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))
-                }
-            }
+        animateCameraToLatestFusedLocation()
 
 
         val waterMark: View = miniMapView?.findViewWithTag("GoogleWatermark") ?: return
@@ -448,8 +426,24 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
         }
     }
 
-    private fun fillMap() {
-        floatingMarkerTitlesOverlay?.setSource(miniMap)
+    @SuppressLint("MissingPermission")
+    private fun animateCameraToLatestFusedLocation() {
+        LocationServices.getFusedLocationProviderClient(activity!!)
+            .lastLocation
+            .addOnSuccessListener { location: Location? ->
+                location?.let {
+                    val position = CameraPosition.Builder()
+                        .target(LatLng(it.latitude, it.longitude))
+                        .zoom(15.0f)
+                        .build()
+                    miniMap?.animateCamera(CameraUpdateFactory.newCameraPosition(position))
+                }
+            }
+    }
+
+    private fun clearMapForNewTrace() {
+        gpsRouteSections = ArrayList()
+        scapeRouteSections = ArrayList()
 
         try {
             floatingMarkerTitlesOverlay?.clearMarkers()
@@ -458,56 +452,72 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
             Log.w("Google fullMap", "fillMap() invoked with uninitialized fullMap")
             return
         }
+    }
 
-        for (i in 0 until gpsRouteSections.size) {
-            miniMap?.placeMarker(gpsRouteSections[i].beginning.toLatLng(),
-                resources,
-                R.drawable.circle_marker,
-                R.color.color_primary_dark)
-            miniMap?.placeMarker(gpsRouteSections[i].end.toLatLng(),
-                resources,
-                R.drawable.circle_marker,
-                R.color.color_primary_dark)
-        }
+    private fun updateMapWithGpsRouteSection(gpsRouteSection: RouteSection) {
 
+        miniMap?.placeMarker(
+            gpsRouteSection.beginning.toLatLng(),
+            resources,
+            R.drawable.circle_marker,
+            R.color.color_primary_dark
+        )
+        miniMap?.placeMarker(
+            gpsRouteSection.end.toLatLng(),
+            resources,
+            R.drawable.circle_marker,
+            R.color.color_primary_dark
+        )
+
+        // update gps user location
         if (gpsRouteSections.isNotEmpty()) {
-            miniMap?.placeMarker(gpsRouteSections.last().end.toLatLng(),
+            gpsUserLocationMarker?.remove()
+
+            gpsUserLocationMarker = miniMap?.placeMarker(gpsRouteSections.last().end.toLatLng(),
                 resources,
                 R.drawable.gps_user_location,
                 R.color.color_primary_dark)
 
+            // this doesn't really work, remove it
             floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
-                MarkerInfo(gpsRouteSections.last().end.toLatLng(),
+                MarkerInfo(gpsRouteSection.end.toLatLng(),
                     "GPS",
                     Color.BLACK))
-
-            miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(gpsRouteSections.last().end.toLatLng(),
-                18f))
         }
 
-        for (i in 0 until scapeRouteSections.size) {
-            miniMap?.placeMarker(scapeRouteSections[i].beginning.toLatLng(),
-                resources,
-                R.drawable.circle_marker,
-                R.color.scape_color)
-            miniMap?.placeMarker(scapeRouteSections[i].end.toLatLng(),
-                resources,
-                R.drawable.circle_marker,
-                R.color.scape_color)
-        }
+    }
 
+    private fun updateMapWithScapeRouteSection(scapeRouteSection: RouteSection) {
+
+        miniMap?.placeMarker(
+            scapeRouteSection.beginning.toLatLng(),
+            resources,
+            R.drawable.circle_marker,
+            R.color.scape_color
+        )
+        miniMap?.placeMarker(
+            scapeRouteSection.end.toLatLng(),
+            resources,
+            R.drawable.circle_marker,
+            R.color.scape_color
+        )
+
+        // update scape user location
         if (scapeRouteSections.isNotEmpty()) {
-            miniMap?.placeMarker(scapeRouteSections.last().end.toLatLng(),
+            scapeUserLocationMarker?.remove()
+
+            scapeUserLocationMarker = miniMap?.placeMarker(scapeRouteSections.last().end.toLatLng(),
                 resources,
                 R.drawable.gps_user_location,
                 R.color.scape_color)
 
+            // remove
             floatingMarkerTitlesOverlay?.addMarker(UUID.randomUUID().mostSignificantBits and Long.MAX_VALUE,
-                MarkerInfo(scapeRouteSections.last().end.toLatLng(),
+                MarkerInfo(scapeRouteSection.end.toLatLng(),
                     "SCAPE",
                     Color.BLACK))
 
-            miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSections.last().end.toLatLng(),
+            miniMap?.animateCamera(CameraUpdateFactory.newLatLngZoom(scapeRouteSection.end.toLatLng(),
                 18f))
         }
     }
@@ -614,7 +624,7 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
 
         EventBus.getDefault().unregister(this)
 
-        TrackTraceManager.sharedInstance(activity!!)?.scapeClient?.stop({}, {})
+        TrackTraceManager.sharedInstance(activity!!).scapeClient?.stop({}, {})
 
         viewFinder.removeFrameProcessor(frameProcessor)
 
@@ -753,5 +763,4 @@ internal class CameraFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMark
     }
 
     // endregion
-
 }
